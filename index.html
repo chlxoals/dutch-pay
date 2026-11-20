@@ -47,12 +47,42 @@
   .hist .t { flex: 1; font-size: 15px; }
   .hist small { color: #777; display: block; }
   #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #222; color: #fff; padding: 10px 16px; border-radius: 20px; font-size: 14px; display: none; z-index: 9; }
+
+  /* ===== 다크 테마 · 차분한 비즈니스 톤 (네이비 + 골드 포인트) ===== */
+  :root { color-scheme: dark; --bg:#0f1319; --card:#171c25; --line:#262d3a; --text:#e4e7ec; --mute:#8d96a7; --accent:#c9a45c; }
+  body { background: var(--bg); color: var(--text); letter-spacing: -0.01em; }
+  .wrap { padding-top: 24px; }
+  h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
+  h1::after { content: ""; display: block; width: 28px; height: 2px; background: var(--accent); margin-top: 10px; }
+  .sub-title { color: var(--mute); margin-top: 12px; margin-bottom: 20px; }
+  h2 { font-size: 13px; font-weight: 600; color: var(--accent); text-transform: none; letter-spacing: 0.02em; margin-bottom: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; box-shadow: none; padding: 18px 16px; }
+  label, .person small { color: var(--mute); font-size: 12px; }
+  .item small, .hist small, .tr .acct { color: var(--mute); }
+  input, select, textarea { background: #0f1319; color: var(--text); border: 1px solid #2f3746; border-radius: 6px; }
+  input::placeholder, textarea::placeholder { color: #566074; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  button { background: var(--accent); color: #17130a; font-weight: 600; border-radius: 6px; }
+  button.sub { background: transparent; color: var(--text); border: 1px solid #353e4e; font-weight: 500; }
+  a.btn { background: var(--accent); color: #17130a; font-weight: 600; border-radius: 6px; }
+  .person { border: 1px solid var(--line); border-radius: 6px; }
+  .checks label { border: 1px solid #2f3746; border-radius: 6px; color: var(--text); font-size: 14px; }
+  .item, .hist { border-bottom: 1px solid var(--line); }
+  .del { background: none; border: 0; color: #d9827f; font-weight: 500; }
+  .empty { color: #667084; }
+  .total { color: var(--text); font-size: 17px; }
+  .line { border-bottom: 1px dashed var(--line); }
+  .line:last-of-type { border-bottom: 0; }
+  .line.me { background: rgba(201,164,92,.12); border-radius: 4px; }
+  .mebox { background: rgba(201,164,92,.1); border: 1px solid rgba(201,164,92,.4); color: var(--text); border-radius: 6px; }
+  .tr { background: #1d2430; border: 1px solid var(--line); border-radius: 6px; }
+  #toast { background: var(--text); color: var(--bg); border-radius: 6px; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>💸 더치페이 정산기</h1>
-  <p class="sub-title">항목별 정산 · 비율 나누기 · 송금 안내 · 링크 공유</p>
+  <h1>더치페이 정산</h1>
+  <p class="sub-title">모임 비용을 항목별로 나누고, 보낼 금액을 정리합니다.</p>
 
   <div class="card">
     <h2>1. 참여자</h2>
@@ -229,7 +259,7 @@
       let msg = `${esc(people[meIdx].name)}님의 부담금: <b>${won(owed[meIdx])}</b><br>`;
       if (mine.length) msg += mine.map(t => `→ ${esc(people[t.to].name)}님에게 <b>${won(t.amt)}</b> 보내기`).join("<br>");
       else if (recv.length) msg += recv.map(t => `← ${esc(people[t.from].name)}님에게서 <b>${won(t.amt)}</b> 받기`).join("<br>");
-      else msg += "보내거나 받을 돈이 없습니다 🎉";
+      else msg += "보내거나 받을 금액이 없습니다.";
       html += `<div class="mebox">${msg}</div>`;
     }
 
@@ -300,7 +330,7 @@
     if ($("mePick")) $("mePick").remove();
     const div = document.createElement("div");
     div.className = "card"; div.id = "mePick";
-    div.innerHTML = `<h2>공유받은 정산입니다 👋</h2><label>나는 누구인가요?</label>
+    div.innerHTML = `<h2>공유받은 정산</h2><label>나는 누구인가요?</label>
       <select id="meSel"><option value="-1">선택하세요</option>${people.map((p, i) => `<option value="${i}">${esc(p.name)}</option>`).join("")}</select>`;
     document.querySelector(".wrap").insertBefore(div, document.querySelector(".wrap .card"));
     $("meSel").onchange = e => { meIdx = +e.target.value; calc(); };
