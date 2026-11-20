@@ -7,96 +7,377 @@
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; font-family: -apple-system, "Malgun Gothic", sans-serif; background: #f4f6fa; color: #222; }
-  .wrap { max-width: 480px; margin: 0 auto; padding: 16px; }
-  h1 { font-size: 22px; margin: 8px 0 16px; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 16px 16px 60px; }
+  h1 { font-size: 22px; margin: 8px 0 4px; }
+  .sub-title { color: #777; font-size: 13px; margin: 0 0 16px; }
   .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-  label { display: block; font-size: 14px; color: #555; margin-bottom: 6px; }
-  input { width: 100%; font-size: 16px; padding: 12px; border: 1px solid #ccd; border-radius: 8px; margin-bottom: 10px; }
+  h2 { font-size: 16px; margin: 0 0 10px; }
+  label { display: block; font-size: 13px; color: #555; margin: 8px 0 4px; }
+  input, select { width: 100%; font-size: 16px; padding: 12px; border: 1px solid #ccd; border-radius: 8px; background: #fff; }
   button { font-size: 16px; padding: 12px 16px; border: 0; border-radius: 8px; background: #3b6cf6; color: #fff; cursor: pointer; min-height: 44px; }
   button.sub { background: #e5e9f5; color: #333; }
-  button.full { width: 100%; }
+  button.small { font-size: 14px; padding: 8px 12px; min-height: 36px; }
+  button.full { width: 100%; margin-top: 10px; }
+  a.btn { display: inline-block; font-size: 14px; padding: 8px 12px; border-radius: 8px; background: #0064ff; color: #fff; text-decoration: none; }
   .row { display: flex; gap: 8px; }
-  .row input { margin-bottom: 0; }
-  .item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+  .person { border: 1px solid #e3e6f0; border-radius: 10px; padding: 10px; margin-top: 10px; }
+  .person .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .person .grid { display: grid; grid-template-columns: 90px 1fr; gap: 8px; }
+  .person small { color: #777; font-size: 12px; }
+  .person input { padding: 8px 10px; font-size: 15px; }
+  .checks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .checks label { display: flex; align-items: center; gap: 6px; margin: 0; padding: 10px 12px; border: 1px solid #ccd; border-radius: 8px; font-size: 15px; color: #222; }
+  .checks input { width: 20px; height: 20px; padding: 0; }
+  .item { padding: 10px 0; border-bottom: 1px solid #eee; font-size: 15px; }
   .item:last-child { border-bottom: 0; }
-  .del { background: none; color: #d33; padding: 4px 10px; min-height: 0; }
-  .result { font-size: 18px; line-height: 1.8; }
-  .total { font-weight: bold; font-size: 20px; }
-  .empty { color: #999; font-size: 14px; }
+  .item small { color: #777; display: block; margin-top: 2px; }
+  .item .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .del { background: none; color: #d33; padding: 4px 8px; min-height: 0; font-size: 14px; }
+  .empty { color: #999; font-size: 14px; margin: 6px 0 0; }
+  .line { display: flex; justify-content: space-between; padding: 6px 0; font-size: 16px; }
+  .line.me { background: #fff8d6; border-radius: 6px; padding: 6px 8px; font-weight: bold; }
+  .tr { padding: 10px; background: #f0f7ff; border-radius: 8px; margin-top: 8px; font-size: 16px; }
+  .tr .acct { font-size: 13px; color: #555; margin-top: 4px; word-break: break-all; }
+  .tr .acts { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .total { font-weight: bold; }
+  .mebox { background: #fff8d6; border-radius: 10px; padding: 12px; margin-bottom: 12px; font-size: 17px; }
+  textarea { width: 100%; font-size: 14px; padding: 10px; border: 1px solid #ccd; border-radius: 8px; min-height: 130px; margin-top: 10px; }
+  .hist { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; gap: 8px; }
+  .hist:last-child { border-bottom: 0; }
+  .hist .t { flex: 1; font-size: 15px; }
+  .hist small { color: #777; display: block; }
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #222; color: #fff; padding: 10px 16px; border-radius: 20px; font-size: 14px; display: none; z-index: 9; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>💸 더치페이 정산기</h1>
+  <p class="sub-title">항목별 정산 · 비율 나누기 · 송금 안내 · 링크 공유</p>
 
   <div class="card">
-    <label>참여자 이름</label>
+    <h2>1. 참여자</h2>
     <div class="row">
-      <input id="name" type="text" placeholder="예: 민수" enterkeyhint="done">
-      <button id="addPerson">추가</button>
+      <input id="name" type="text" placeholder="이름 입력 (예: 민수)" enterkeyhint="done">
+      <button id="addPerson" style="white-space:nowrap">추가</button>
     </div>
     <div id="people"></div>
   </div>
 
   <div class="card">
-    <label>총 금액 (원)</label>
-    <input id="amount" type="number" inputmode="numeric" placeholder="예: 52000">
-    <button class="full" id="calc">정산하기</button>
+    <h2>2. 지출 항목 추가</h2>
+    <label>항목 이름</label>
+    <input id="itemName" type="text" placeholder="예: 1차 고깃집">
+    <label>금액 (원)</label>
+    <input id="itemAmount" type="number" inputmode="numeric" placeholder="예: 52000">
+    <label>결제한 사람</label>
+    <select id="payer"></select>
+    <label>함께한 사람 (체크한 사람끼리 비율대로 나눕니다)</label>
+    <div class="checks" id="members"></div>
+    <button class="full" id="addItem">항목 추가</button>
+    <div id="items"></div>
   </div>
 
-  <div class="card" id="resultCard" style="display:none">
-    <div class="result" id="result"></div>
+  <div class="card">
+    <h2>3. 정산 결과</h2>
+    <button class="full" id="calc" style="margin-top:0">정산하기</button>
+    <div id="result"></div>
+  </div>
+
+  <div class="card">
+    <h2>내 정산 이력</h2>
+    <label>모임 이름</label>
+    <div class="row">
+      <input id="title" type="text" placeholder="예: 동아리 회식">
+      <button id="saveHist" style="white-space:nowrap">저장</button>
+    </div>
+    <div id="history"></div>
   </div>
 
   <button class="sub full" id="reset">처음부터 다시</button>
 </div>
+<div id="toast"></div>
 
 <script>
-  let people = [];
+  // ---------- 상태 ----------
+  let people = [];   // {name, weight, account, toss}
+  let items = [];    // {name, amount, payer, members:[idx]}
+  let meIdx = -1;    // 공유 링크로 들어온 사람이 고른 "나"
+  const HIST_KEY = "dutchpay_history_v1";
+  const CUR_KEY = "dutchpay_current_v1";
   const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+  const won = n => Math.round(n).toLocaleString("ko-KR") + "원";
 
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.style.display = "block";
+    clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = "none", 1800);
+  }
+  function autosave() {
+    try { localStorage.setItem(CUR_KEY, JSON.stringify({ people, items, title: $("title").value })); } catch (e) {}
+  }
+
+  // ---------- 참여자 ----------
   function renderPeople() {
-    const box = $("people");
-    if (!people.length) { box.innerHTML = '<p class="empty">참여자를 추가해 주세요.</p>'; return; }
-    box.innerHTML = people.map((p, i) =>
-      `<div class="item"><span>${p.replace(/</g, "&lt;")}</span><button class="del" data-i="${i}">삭제</button></div>`
-    ).join("");
+    $("people").innerHTML = people.length ? people.map((p, i) => `
+      <div class="person">
+        <div class="head"><b>${esc(p.name)}</b><button class="del" data-del="${i}">삭제</button></div>
+        <div class="grid">
+          <div><small>비율(인분)</small><input type="number" step="0.5" min="0.5" inputmode="decimal" value="${p.weight}" data-w="${i}"></div>
+          <div><small>받을 계좌 (선택)</small><input type="text" placeholder="예: 국민 123-45-6789" value="${esc(p.account)}" data-a="${i}"></div>
+        </div>
+        <div style="margin-top:6px"><small>토스 ID (선택, toss.me/아이디)</small><input type="text" placeholder="예: minsu" value="${esc(p.toss)}" data-t="${i}"></div>
+      </div>`).join("") : '<p class="empty">참여자를 추가해 주세요.</p>';
+    $("payer").innerHTML = people.map((p, i) => `<option value="${i}">${esc(p.name)}</option>`).join("");
+    $("members").innerHTML = people.map((p, i) =>
+      `<label><input type="checkbox" value="${i}" checked>${esc(p.name)}</label>`).join("");
   }
 
   function addPerson() {
     const v = $("name").value.trim();
     if (!v) return;
-    people.push(v);
+    if (people.some(p => p.name === v)) { alert("이미 있는 이름입니다."); return; }
+    people.push({ name: v, weight: 1, account: "", toss: "" });
     $("name").value = "";
-    renderPeople();
+    renderPeople(); autosave();
     $("name").focus();
   }
 
-  function calc() {
-    const total = parseInt($("amount").value, 10);
-    if (people.length < 2) { alert("참여자를 2명 이상 추가해 주세요."); return; }
-    if (!total || total <= 0) { alert("총 금액을 입력해 주세요."); return; }
-    const n = people.length;
-    const base = Math.floor(total / n / 10) * 10; // 10원 단위 내림
-    const rest = total - base * n;                // 남는 금액은 첫 번째 사람이 부담
-    let html = `<div class="total">총 ${total.toLocaleString()}원 / ${n}명</div>`;
-    people.forEach((p, i) => {
-      const pay = base + (i === 0 ? rest : 0);
-      html += `<div>${p.replace(/</g, "&lt;")}: <b>${pay.toLocaleString()}원</b></div>`;
+  function removePerson(i) {
+    if (items.some(it => it.payer === i || it.members.includes(i))) {
+      alert("이 사람이 포함된 항목이 있습니다. 항목을 먼저 삭제해 주세요.");
+      return;
+    }
+    people.splice(i, 1);
+    items.forEach(it => {
+      if (it.payer > i) it.payer--;
+      it.members = it.members.map(m => m > i ? m - 1 : m);
     });
-    if (rest > 0) html += `<div class="empty">10원 단위로 나누고 남은 ${rest.toLocaleString()}원은 ${people[0].replace(/</g, "&lt;")}님이 더 냅니다.</div>`;
-    $("result").innerHTML = html;
-    $("resultCard").style.display = "block";
+    renderPeople(); renderItems(); autosave();
   }
 
+  // ---------- 항목 ----------
+  function renderItems() {
+    $("items").innerHTML = items.length
+      ? items.map((it, i) => `
+        <div class="item">
+          <div class="top"><b>${esc(it.name)} · ${won(it.amount)}</b><button class="del" data-delitem="${i}">삭제</button></div>
+          <small>결제: ${esc(people[it.payer].name)} / 함께: ${it.members.map(m => esc(people[m].name)).join(", ")}</small>
+        </div>`).join("")
+      : '<p class="empty">아직 항목이 없습니다.</p>';
+  }
+
+  function addItem() {
+    if (people.length < 2) { alert("참여자를 2명 이상 추가해 주세요."); return; }
+    const name = $("itemName").value.trim() || ("항목 " + (items.length + 1));
+    const amount = parseInt($("itemAmount").value, 10);
+    if (!amount || amount <= 0) { alert("금액을 입력해 주세요."); return; }
+    const members = [...document.querySelectorAll("#members input:checked")].map(c => +c.value);
+    if (!members.length) { alert("함께한 사람을 1명 이상 체크해 주세요."); return; }
+    items.push({ name, amount, payer: +$("payer").value, members });
+    $("itemName").value = ""; $("itemAmount").value = "";
+    renderItems(); autosave();
+    toast("항목을 추가했습니다");
+  }
+
+  // ---------- 계산 ----------
+  // 비율(weight)대로 나누고, 원 단위 나머지는 소수점이 큰 사람부터 1원씩 배분
+  function splitItem(amount, memberIdx) {
+    const ws = memberIdx.map(i => Math.max(Number(people[i].weight) || 1, 0.1));
+    const W = ws.reduce((a, b) => a + b, 0);
+    const exact = ws.map(w => amount * w / W);
+    const base = exact.map(Math.floor);
+    let rest = amount - base.reduce((a, b) => a + b, 0);
+    const order = exact.map((e, k) => ({ k, f: e - Math.floor(e) })).sort((a, b) => b.f - a.f);
+    for (let j = 0; rest > 0; j++, rest--) base[order[j % order.length].k]++;
+    return base;
+  }
+
+  function compute() {
+    const n = people.length;
+    const owed = Array(n).fill(0), paid = Array(n).fill(0);
+    items.forEach(it => {
+      paid[it.payer] += it.amount;
+      const parts = splitItem(it.amount, it.members);
+      it.members.forEach((m, k) => owed[m] += parts[k]);
+    });
+    const give = [], take = [];
+    people.forEach((_, i) => {
+      const v = paid[i] - owed[i];
+      if (v < 0) give.push({ i, v: -v }); else if (v > 0) take.push({ i, v });
+    });
+    give.sort((a, b) => b.v - a.v); take.sort((a, b) => b.v - a.v);
+    const transfers = [];
+    let a = 0, b = 0;
+    while (a < give.length && b < take.length) {
+      const m = Math.min(give[a].v, take[b].v);
+      transfers.push({ from: give[a].i, to: take[b].i, amt: m });
+      give[a].v -= m; take[b].v -= m;
+      if (give[a].v === 0) a++;
+      if (take[b].v === 0) b++;
+    }
+    return { owed, paid, transfers, total: items.reduce((s, it) => s + it.amount, 0) };
+  }
+
+  function calc() {
+    if (!items.length) { alert("지출 항목을 먼저 추가해 주세요."); return; }
+    const { owed, paid, transfers, total } = compute();
+    let html = "";
+
+    if (meIdx >= 0 && people[meIdx]) {
+      const mine = transfers.filter(t => t.from === meIdx);
+      const recv = transfers.filter(t => t.to === meIdx);
+      let msg = `${esc(people[meIdx].name)}님의 부담금: <b>${won(owed[meIdx])}</b><br>`;
+      if (mine.length) msg += mine.map(t => `→ ${esc(people[t.to].name)}님에게 <b>${won(t.amt)}</b> 보내기`).join("<br>");
+      else if (recv.length) msg += recv.map(t => `← ${esc(people[t.from].name)}님에게서 <b>${won(t.amt)}</b> 받기`).join("<br>");
+      else msg += "보내거나 받을 돈이 없습니다 🎉";
+      html += `<div class="mebox">${msg}</div>`;
+    }
+
+    html += `<p class="total">총 지출 ${won(total)}</p>`;
+    html += people.map((p, i) =>
+      `<div class="line ${i === meIdx ? "me" : ""}"><span>${esc(p.name)}${Number(p.weight) !== 1 ? ` (${p.weight}인분)` : ""}</span><span>부담 ${won(owed[i])}</span></div>`).join("");
+
+    html += `<h2 style="margin-top:14px">송금 안내</h2>`;
+    if (transfers.length) {
+      html += transfers.map((t, k) => {
+        const to = people[t.to];
+        const acct = to.account.trim();
+        const toss = to.toss.trim().replace(/^.*toss\.me\//, "").replace(/\/.*$/, "");
+        return `<div class="tr">${esc(people[t.from].name)} → ${esc(to.name)} <b>${won(t.amt)}</b>
+          ${acct ? `<div class="acct">${esc(acct)}</div>` : ""}
+          <div class="acts">
+            ${acct ? `<button class="small sub" data-copyacct="${esc(acct)}">계좌 복사</button>` : ""}
+            ${toss ? `<a class="btn" target="_blank" rel="noopener" href="https://toss.me/${encodeURIComponent(toss)}/${t.amt}">토스로 송금</a>` : ""}
+          </div></div>`;
+      }).join("");
+    } else html += '<p class="empty">보낼 돈이 없습니다. 모두 정산 완료!</p>';
+
+    let text = `[${$("title").value.trim() || "정산 결과"}] 총 ${won(total)}\n`;
+    text += people.map((p, i) => `- ${p.name}: ${won(owed[i])}`).join("\n");
+    text += "\n\n[송금]\n";
+    text += transfers.length
+      ? transfers.map(t => `${people[t.from].name} → ${people[t.to].name} ${won(t.amt)}${people[t.to].account ? " (" + people[t.to].account + ")" : ""}`).join("\n")
+      : "없음";
+    html += `<textarea id="shareText" readonly>${esc(text)}</textarea>
+      <button class="full" id="copy">결과 문구 복사</button>
+      <button class="full sub" id="shareLink">정산 링크 복사 (친구에게 보내기)</button>`;
+    $("result").innerHTML = html;
+  }
+
+  // ---------- 복사 ----------
+  async function copy(text) {
+    try { await navigator.clipboard.writeText(text); }
+    catch (e) {
+      const ta = document.createElement("textarea"); ta.value = text;
+      document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
+    }
+    toast("복사했습니다");
+  }
+
+  // ---------- 링크 공유 ----------
+  function encodeState() {
+    const json = JSON.stringify({ t: $("title").value, p: people, i: items });
+    return btoa(unescape(encodeURIComponent(json))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function decodeState(s) {
+    s = s.replace(/-/g, "+").replace(/_/g, "/");
+    while (s.length % 4) s += "=";
+    return JSON.parse(decodeURIComponent(escape(atob(s))));
+  }
+  function makeLink() {
+    return location.origin + location.pathname + "#d=" + encodeState();
+  }
+  function loadFromHash() {
+    const m = location.hash.match(/^#d=(.+)$/);
+    if (!m) return false;
+    try {
+      const d = decodeState(m[1]);
+      people = d.p; items = d.i; $("title").value = d.t || "";
+      return true;
+    } catch (e) { toast("링크를 읽을 수 없습니다"); return false; }
+  }
+  function renderMePicker() {
+    if ($("mePick")) $("mePick").remove();
+    const div = document.createElement("div");
+    div.className = "card"; div.id = "mePick";
+    div.innerHTML = `<h2>공유받은 정산입니다 👋</h2><label>나는 누구인가요?</label>
+      <select id="meSel"><option value="-1">선택하세요</option>${people.map((p, i) => `<option value="${i}">${esc(p.name)}</option>`).join("")}</select>`;
+    document.querySelector(".wrap").insertBefore(div, document.querySelector(".wrap .card"));
+    $("meSel").onchange = e => { meIdx = +e.target.value; calc(); };
+  }
+
+  // ---------- 이력 ----------
+  const getHist = () => { try { return JSON.parse(localStorage.getItem(HIST_KEY)) || []; } catch (e) { return []; } };
+  function renderHistory() {
+    const h = getHist();
+    $("history").innerHTML = h.length ? h.map((x, i) => `
+      <div class="hist"><div class="t"><b>${esc(x.title)}</b><small>${esc(x.date)} · ${x.p.length}명 · ${x.i.length}개 항목</small></div>
+      <button class="small sub" data-load="${i}">불러오기</button><button class="del" data-delhist="${i}">삭제</button></div>`).join("")
+      : '<p class="empty">저장된 정산이 없습니다.</p>';
+  }
+  function saveHist() {
+    if (!items.length) { alert("저장할 항목이 없습니다."); return; }
+    const title = $("title").value.trim() || "이름 없는 모임";
+    const h = getHist();
+    h.unshift({ title, date: new Date().toLocaleString("ko-KR"), p: people, i: items });
+    localStorage.setItem(HIST_KEY, JSON.stringify(h.slice(0, 30)));
+    renderHistory(); toast("이력에 저장했습니다");
+  }
+
+  // ---------- 이벤트 ----------
   $("addPerson").onclick = addPerson;
   $("name").addEventListener("keydown", e => { if (e.key === "Enter") addPerson(); });
-  $("people").addEventListener("click", e => {
-    if (e.target.dataset.i !== undefined) { people.splice(+e.target.dataset.i, 1); renderPeople(); }
+  $("people").addEventListener("click", e => { if (e.target.dataset.del !== undefined) removePerson(+e.target.dataset.del); });
+  $("people").addEventListener("input", e => {
+    const d = e.target.dataset;
+    if (d.w !== undefined) people[+d.w].weight = parseFloat(e.target.value) || 1;
+    if (d.a !== undefined) people[+d.a].account = e.target.value;
+    if (d.t !== undefined) people[+d.t].toss = e.target.value;
+    autosave();
+  });
+  $("addItem").onclick = addItem;
+  $("items").addEventListener("click", e => {
+    if (e.target.dataset.delitem !== undefined) { items.splice(+e.target.dataset.delitem, 1); renderItems(); autosave(); }
   });
   $("calc").onclick = calc;
-  $("reset").onclick = () => { people = []; $("amount").value = ""; $("resultCard").style.display = "none"; renderPeople(); };
-  renderPeople();
+  $("result").addEventListener("click", e => {
+    if (e.target.id === "copy") copy($("shareText").value);
+    if (e.target.id === "shareLink") copy(makeLink());
+    if (e.target.dataset.copyacct) copy(e.target.dataset.copyacct);
+  });
+  $("saveHist").onclick = saveHist;
+  $("title").addEventListener("input", autosave);
+  $("history").addEventListener("click", e => {
+    const h = getHist();
+    if (e.target.dataset.load !== undefined) {
+      const x = h[+e.target.dataset.load];
+      people = x.p; items = x.i; $("title").value = x.title; meIdx = -1;
+      renderPeople(); renderItems(); $("result").innerHTML = ""; autosave(); toast("불러왔습니다");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    if (e.target.dataset.delhist !== undefined) {
+      h.splice(+e.target.dataset.delhist, 1);
+      localStorage.setItem(HIST_KEY, JSON.stringify(h)); renderHistory();
+    }
+  });
+  $("reset").onclick = () => {
+    if (!confirm("모두 지우고 처음부터 시작할까요?")) return;
+    people = []; items = []; meIdx = -1; $("title").value = ""; $("result").innerHTML = "";
+    if ($("mePick")) $("mePick").remove();
+    history.replaceState(null, "", location.pathname);
+    renderPeople(); renderItems(); autosave();
+  };
+
+  // ---------- 시작 ----------
+  const fromLink = loadFromHash();
+  if (!fromLink) {
+    try {
+      const cur = JSON.parse(localStorage.getItem(CUR_KEY));
+      if (cur) { people = cur.people || []; items = cur.items || []; $("title").value = cur.title || ""; }
+    } catch (e) {}
+  }
+  renderPeople(); renderItems(); renderHistory();
+  if (fromLink) { renderMePicker(); if (items.length) calc(); }
 </script>
 </body>
 </html>
