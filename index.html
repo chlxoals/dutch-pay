@@ -262,7 +262,7 @@ function viewHome() {
       <button class="full" data-act="copyResult">결과 문구 복사</button>
       <button class="full sub" data-act="copyLink">여행 링크 복사 (친구에게 보내기)</button></div>`;
   }
-  return memberCard + formCard + result;
+  return memberCard + formCard + result + '<button class="full sub" data-act="resetAll" style="margin-top:4px">처음부터 다시 (여행 포함 초기화)</button>';
 }
 
 // ============ 화면: 환율 ============
@@ -383,6 +383,10 @@ async function fetchRates() {
 function act(a, b) {
   const t = trip();
   if (a === "goTrips") { tab = "trips"; render(); }
+  if (a === "resetAll") {
+    if (!t || !confirm(`"${t.name}" 여행의 참여자와 입력한 내용이 모두 지워지고 처음 화면으로 돌아갑니다. 계속할까요?`)) return;
+    S.trips = S.trips.filter(x => x.id !== t.id); S.cur = null; showResult = false; form.payer = ""; save(); tab = "home"; render(); window.scrollTo(0, 0);
+  }
   if (a === "newTrip") { const v = $("tName").value.trim(); if (!v) { alert("여행 이름을 입력해 주세요."); return; } newTrip(v); tab = "home"; render(); }
   if (a === "pickTrip") { S.cur = b.dataset.id; save(); tab = "home"; render(); }
   if (a === "delTrip") { if (!confirm("이 여행을 삭제할까요? 되돌릴 수 없습니다.")) return; S.trips = S.trips.filter(x => x.id !== b.dataset.id); if (S.cur === b.dataset.id) S.cur = S.trips[0] ? S.trips[0].id : null; save(); render(); }
