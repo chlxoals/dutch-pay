@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>여행·모임 정산</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f1319'/%3E%3Ccircle cx='32' cy='32' r='21' fill='none' stroke='%23c9a45c' stroke-width='4'/%3E%3Ctext x='32' y='41' font-size='26' font-weight='700' text-anchor='middle' fill='%23c9a45c' font-family='sans-serif'%3E%E2%82%A9%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231f5eff'/%3E%3Ccircle cx='32' cy='32' r='21' fill='none' stroke='%23ffffff' stroke-width='4'/%3E%3Ctext x='32' y='41' font-size='26' font-weight='700' text-anchor='middle' fill='%23ffffff' font-family='sans-serif'%3E%E2%82%A9%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
-<meta name="theme-color" content="#0f1319">
+<meta name="theme-color" content="#1f5eff">
 <style>
   * { box-sizing: border-box; }
   :root { color-scheme: dark; --bg:#0f1319; --card:#171c25; --line:#262d3a; --text:#e4e7ec; --mute:#8d96a7; --accent:#c9a45c; --danger:#d9827f; }
@@ -129,11 +129,65 @@
   #resultCard .total { color: var(--ink); }
   #resultCard button { background: var(--ink); color: #f1ead8; }
   #resultCard button.sub { background: transparent; color: var(--ink); border: 1px solid var(--ink); }
+
+  /* ===== DESIGN-V3 START: 맑은 하늘색 여행 앱 + 탑승권형 정산 결과 (되돌리려면 START~END 블록을 지우세요) ===== */
+  :root { color-scheme: light; --bg: #e9eef7; --card: #ffffff; --line: #e3e8f3; --text: #0e1a3a; --mute: #6a7490; --accent: #1f5eff; --danger: #e5484d; --good: #12a37f; --paper: #ffffff; --ink: #0e1a3a; }
+  body { background: #e9eef7; position: relative; color: var(--text); }
+  body::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 210px; background: linear-gradient(135deg, #1f5eff 0%, #4b7bff 55%, #7aa0ff 100%); border-radius: 0 0 30px 30px; z-index: 0; }
+  .wrap { position: relative; z-index: 1; }
+  h1 { color: #fff; font-size: 26px; font-weight: 800; letter-spacing: -0.04em; }
+  h1::after { background: rgba(255,255,255,.55); }
+  .sub-title { color: rgba(255,255,255,.88); }
+  h2 { color: var(--text); font-size: 16px; font-weight: 800; letter-spacing: -0.02em; }
+  .card { background: #fff; border: 0; border-radius: 20px; box-shadow: 0 10px 28px -14px rgba(25,45,110,.35); }
+  label, .person small { color: var(--mute); }
+  input, select, textarea { background: #f2f5fb; color: var(--text); border: 1.5px solid transparent; border-radius: 12px; }
+  input::placeholder, textarea::placeholder { color: #9aa3bd; }
+  input:focus, select:focus, textarea:focus { background: #fff; border-color: var(--accent); box-shadow: 0 0 0 4px rgba(31,94,255,.14); }
+  button { background: var(--accent); color: #fff; border-radius: 12px; font-weight: 700; }
+  button.sub { background: #eaf0ff; color: var(--accent); border: 0; }
+  a.btn { background: var(--accent); color: #fff; }
+  .del { background: none; color: var(--danger); }
+  .chip { background: #f2f5fb; border: 1.5px solid transparent; color: var(--text); border-radius: 999px; }
+  .chip.on { background: #eaf0ff; border-color: var(--accent); color: var(--accent); }
+  .checks label { background: #f2f5fb; border: 1.5px solid transparent; border-radius: 999px; color: var(--text); }
+  .erow { background: #f7f9fd; border: 1.5px solid #e6ebf6; border-radius: 16px; }
+  .erow-head b { color: var(--accent); }
+  .exp, .item, .hist, .mem, .line, .plan-row, .cmp { border-color: var(--line); }
+  .stat { background: #f2f5fb; border: 0; border-radius: 14px; }
+  .bar .bg { background: #e6ebf5; }
+  .bar .bg.stack u { background: var(--text); opacity: .6; }
+  .empty { color: #8a93ae; }
+  .total { color: var(--text); }
+  .big { color: var(--accent); }
+  .note { color: var(--mute); }
+  nav { background: rgba(255,255,255,.94); border-top: 1px solid var(--line); backdrop-filter: blur(10px); }
+  nav button { background: none; color: #8f99b8; }
+  nav button.on { color: var(--accent); border-top-color: var(--accent); }
+  #toast { background: var(--text); color: #fff; }
+  details summary { color: var(--accent); font-weight: 600; }
+  .hero { background: linear-gradient(160deg, #ffffff 0%, #eef3ff 100%); }
+  .hero-t { color: var(--text); }
+  .hero-s { color: var(--mute); }
+  #resultCard { background: #fff; color: var(--text); border-radius: 20px; box-shadow: none; padding: 20px 20px 22px; margin-bottom: 18px;
+    -webkit-mask: radial-gradient(12px at 0 64px, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(12px at 100% 64px, #0000 98%, #000) right / 51% 100% no-repeat;
+    mask: radial-gradient(12px at 0 64px, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(12px at 100% 64px, #0000 98%, #000) right / 51% 100% no-repeat; }
+  #resultCard::after { content: none; }
+  #resultCard h2 { color: var(--accent); margin: 0; padding: 0 0 19px; line-height: 24px; border-bottom: 2px dashed #cfd7ea; }
+  #resultCard .tr { background: none; border: 0; border-bottom: 1px dashed #dbe2f1; border-radius: 0; padding: 16px 0; font-size: 16px; }
+  #resultCard .tr b { color: var(--accent); font-size: 32px; font-weight: 800; letter-spacing: -0.03em; display: block; margin-top: 2px; }
+  #resultCard label.sentchk { color: var(--mute); }
+  #resultCard .note, #resultCard .empty { color: var(--mute); }
+  #resultCard .line { border-bottom-color: var(--line); color: var(--text); }
+  #resultCard summary { color: var(--accent); }
+  #resultCard button { background: var(--accent); color: #fff; }
+  #resultCard button.sub { background: #eaf0ff; color: var(--accent); border: 0; }
+  /* ===== DESIGN-V3 END ===== */
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1><svg class="logo" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#171c25"/><circle cx="32" cy="32" r="21" fill="none" stroke="#c9a45c" stroke-width="4"/><text x="32" y="41" font-size="26" font-weight="700" text-anchor="middle" fill="#c9a45c" font-family="sans-serif">₩</text></svg>여행·모임 정산</h1>
+  <h1><svg class="logo" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#ffffff"/><circle cx="32" cy="32" r="21" fill="none" stroke="#1f5eff" stroke-width="4"/><text x="32" y="41" font-size="26" font-weight="700" text-anchor="middle" fill="#1f5eff" font-family="sans-serif">₩</text></svg>여행·모임 정산</h1>
   <p class="sub-title" id="tripLine"></p>
   <div id="view"></div>
 </div>
@@ -367,7 +421,7 @@ function bars(entries, fmt, total) {
   return entries.map(([k, v]) => `<div class="bar"><span class="lb">${esc(k)}</span><div class="bg"><i style="width:${Math.round(v / max * 100)}%"></i></div><span class="val">${fmt(v)}${total ? " · " + Math.round(v / total * 100) + "%" : ""}</span></div>`).join("");
 }
 // 날짜별·카테고리별로 직접 적은 지출(현지 통화)을 원화로 환산해 모아 둔다
-const COLORS = { 식비: "#c9a45c", 교통: "#6d8fe8", 숙박: "#7fbf9b", 쇼핑: "#d9827f", 기타: "#8d96a7" };
+const COLORS = { 식비: "#ff7a45", 교통: "#1f5eff", 숙박: "#7a5cff", 쇼핑: "#12a37f", 기타: "#8f99b8" };
 function daily(t) { t.daily = t.daily || {}; return t.daily; }
 function dayData(t) {
   const f = fund(t), cur = f.cur || "JPY", r = S.rates[cur] || 1, n = f.days > 0 ? Math.floor(f.days) : 0;
@@ -418,7 +472,7 @@ function statsOut(t) {
     const p = planAmt(c), a = D.byCat[c], over = hasPlan && a > p;
     const note = hasPlan ? (a === 0 && p === 0 ? "" : over ? `${won(a - p)} 초과` : `${won(p - a)} 아낌`) : "";
     return `<div class="cmp"><div class="cmp-h"><b>${c}</b><span style="color:${over ? "var(--danger)" : "var(--accent)"}">${note}</span></div>
-      ${hasPlan ? `<div class="bar"><span class="lb">계획</span><div class="bg"><i style="width:${p / maxC * 100}%;background:#4a5568"></i></div><span class="val">${won(p)}</span></div>` : ""}
+      ${hasPlan ? `<div class="bar"><span class="lb">계획</span><div class="bg"><i style="width:${p / maxC * 100}%;background:#c5cde3"></i></div><span class="val">${won(p)}</span></div>` : ""}
       <div class="bar"><span class="lb">실제</span><div class="bg"><i style="width:${a / maxC * 100}%;background:${over ? "var(--danger)" : COLORS[c]}"></i></div><span class="val">${won(a)}</span></div></div>`;
   }).join("");
   let acc = 0;
@@ -428,7 +482,7 @@ function statsOut(t) {
   return `<div class="card"><h2>예산 비교</h2>${head}</div>
     <div class="card"><h2>언제 얼마 썼나</h2><div class="legend">${legend}</div>${dayRows}${dayBudget ? `<p class="note">흰 세로선은 하루 예산(${won(dayBudget)})이에요.</p>` : ""}</div>
     <div class="card"><h2>무엇에 썼나 (계획과 비교)</h2>${cmp}</div>
-    <div class="card"><h2>쓴 돈의 비율</h2><div class="pie" style="background:radial-gradient(circle at center, #171c25 0 42%, transparent 43%), conic-gradient(${stops})"></div>${pieLegend}</div>`;
+    <div class="card"><h2>쓴 돈의 비율</h2><div class="pie" style="background:radial-gradient(circle at center, #fff 0 42%, transparent 43%), conic-gradient(${stops})"></div>${pieLegend}</div>`;
 }
 function viewStats() {
   const t = trip();
