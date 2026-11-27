@@ -111,6 +111,9 @@ function defaultRates() { const r = {}; Object.keys(CURS).forEach(c => r[c] = CU
 let S = { trips: [], cur: null, rates: defaultRates(), rateTime: "" };
 try { const raw = JSON.parse(localStorage.getItem(KEY)); if (raw) S = Object.assign(S, raw); } catch (e) {}
 S.rates = Object.assign(defaultRates(), S.rates);
+// 예전에 만든 예시 여행 자동 정리
+S.trips = (S.trips || []).filter(t => !/\(예시\)$/.test(t.name));
+if (!S.trips.some(t => t.id === S.cur)) S.cur = S.trips[0] ? S.trips[0].id : null;
 let tab = "home";
 let form = { date: today(), cur: "KRW", payer: "", cat: "", catAuto: true };
 let calcCur = "USD";
@@ -175,8 +178,8 @@ function guessCat(name) {
 // ============ 화면: 정산 ============
 function viewHome() {
   const t = trip();
-  if (!t) return `<div class="card"><h2>시작하기</h2><p class="empty">먼저 여행(모임)을 만들어 주세요.</p>
-    <button class="full" data-act="goTrips">여행 만들기</button></div>`;
+  if (!t) return `<div class="card"><h2>새 여행 시작</h2>
+    <div class="row"><div><input id="tName" type="text" placeholder="여행 이름 (예: 도쿄 5박 6일)" enterkeyhint="done"></div><button data-act="newTrip">시작</button></div></div>`;
   if (!form.payer || !t.members.some(m => m.id === form.payer)) form.payer = t.members[0] ? t.members[0].id : "";
   const memberCard = `<div class="card"><h2>참여자</h2>
     <div class="row"><div><input id="mName" type="text" placeholder="이름 입력 후 추가 (예: 민수)" enterkeyhint="done"></div><button data-act="addMember">추가</button></div>
@@ -317,21 +320,6 @@ function newTrip(name) {
   const t = { id: uid(), name: name || "새 여행", members: [], expenses: [], exch: [] };
   S.trips.push(t); S.cur = t.id; save(); return t;
 }
-function demo() {
-  const t = newTrip("도쿄 여행 (예시)");
-  const ids = ["민수", "지영", "철수"].map(n => { const m = { id: uid(), name: n, weight: 1 }; t.members.push(m); return m.id; });
-  const [a, b, c] = ids;
-  const d1 = today();
-  const add = (date, name, cat, amount, payer, mem) => t.expenses.push({ id: uid(), date, name, cat, amount, cur: "JPY", rate: S.rates.JPY, payer, members: mem });
-  const day = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
-  add(day(0), "라멘", "식비", 6000, a, ids);
-  add(day(0), "택시", "교통", 3000, b, [b, c]);
-  add(day(1), "편의점", "식비", 1500, c, ids);
-  add(day(1), "호텔", "숙박", 30000, a, ids);
-  add(day(2), "기념품", "쇼핑", 12000, b, ids);
-  t.exch.push({ id: uid(), who: a, cur: "JPY", krw: 150000, foreign: 16000 });
-  save(); tab = "home"; render(); toast("예시 여행을 만들었습니다");
-}
 function importFromHash() {
   const m = location.hash.match(/^#t=(.+)$/); if (!m) return;
   try {
@@ -359,7 +347,6 @@ async function fetchRates() {
 function act(a, b) {
   const t = trip();
   if (a === "goTrips") { tab = "trips"; render(); }
-  if (a === "demo") demo();
   if (a === "newTrip") { const v = $("tName").value.trim(); if (!v) { alert("여행 이름을 입력해 주세요."); return; } newTrip(v); tab = "home"; render(); }
   if (a === "pickTrip") { S.cur = b.dataset.id; save(); tab = "home"; render(); }
   if (a === "delTrip") { if (!confirm("이 여행을 삭제할까요? 되돌릴 수 없습니다.")) return; S.trips = S.trips.filter(x => x.id !== b.dataset.id); if (S.cur === b.dataset.id) S.cur = S.trips[0] ? S.trips[0].id : null; save(); render(); }
