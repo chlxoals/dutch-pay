@@ -78,6 +78,16 @@
   .plan-row input { width: 62px; flex: none; padding: 8px; font-size: 15px; text-align: right; }
   .pv { flex: 1; text-align: right; font-size: 14px; min-width: 0; }
   .pv small { display: block; color: var(--mute); font-size: 12px; margin-top: 2px; }
+  .bar .bg.stack { display: flex; position: relative; }
+  .bar .bg.stack i { flex: none; border-radius: 0; }
+  .bar .bg.stack u { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; opacity: .75; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 8px; font-size: 12px; color: var(--mute); }
+  .lg { display: inline-flex; align-items: center; }
+  .cmp { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .cmp:last-child { border-bottom: 0; }
+  .cmp-h { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 2px; }
+  .pie { width: 160px; height: 160px; border-radius: 50%; margin: 4px auto 14px; }
   .tr.done { opacity: .55; }
   .tr.done b { text-decoration: line-through; }
   label.sentchk, label.fundchk { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; font-size: 14px; color: var(--text); }
@@ -324,26 +334,77 @@ function bars(entries, fmt, total) {
   const max = Math.max(...entries.map(e => e[1]), 1);
   return entries.map(([k, v]) => `<div class="bar"><span class="lb">${esc(k)}</span><div class="bg"><i style="width:${Math.round(v / max * 100)}%"></i></div><span class="val">${fmt(v)}${total ? " · " + Math.round(v / total * 100) + "%" : ""}</span></div>`).join("");
 }
+// 날짜별·카테고리별로 직접 적은 지출(현지 통화)을 원화로 환산해 모아 둔다
+const COLORS = { 식비: "#c9a45c", 교통: "#6d8fe8", 숙박: "#7fbf9b", 쇼핑: "#d9827f", 기타: "#8d96a7" };
+function daily(t) { t.daily = t.daily || {}; return t.daily; }
+function dayData(t) {
+  const f = fund(t), cur = f.cur || "JPY", r = S.rates[cur] || 1, n = f.days > 0 ? Math.floor(f.days) : 0;
+  const dd = daily(t), byDay = [], byCat = {}; let total = 0, filled = 0;
+  CATS.forEach(c => byCat[c] = 0);
+  for (let d = 1; d <= n; d++) {
+    const row = dd[d] || {}, cats = {}; let sum = 0;
+    CATS.forEach(c => { const w = Math.round((parseFloat(row[c]) || 0) * r); cats[c] = w; sum += w; byCat[c] += w; });
+    if (sum > 0) filled++;
+    total += sum; byDay.push({ d, cats, sum });
+  }
+  return { n, byDay, byCat, total, filled, cur, r };
+}
+function daySumText(t, d) {
+  const f = fund(t), cur = f.cur || "JPY", r = S.rates[cur] || 1, row = daily(t)[d] || {};
+  const loc = CATS.reduce((s, c) => s + (parseFloat(row[c]) || 0), 0);
+  return loc > 0 ? `${cs(cur)}${num(loc, r >= 100 ? 2 : 0)} · ${won(loc * r)}` : "미입력";
+}
+function statsOut(t) {
+  const f = fund(t), D = dayData(t), plan = planOf(f);
+  if (D.total === 0) return '<div class="card"><p class="empty">금액을 적으면 예산과 비교한 그래프가 나와요.</p></div>';
+  const fx = v => cs(D.cur) + num(v / D.r, D.r >= 100 ? 2 : 0);
+  const hasBudget = f.budget > 0, done = D.filled >= D.n;
+  let head = "";
+  if (hasBudget) {
+    const diff = f.budget - D.total, pct = Math.round(D.total / f.budget * 100);
+    const msg = done ? (diff >= 0 ? `예산보다 ${won(diff)} 아꼈어요` : `예산보다 ${won(-diff)} 더 썼어요`)
+      : (diff >= 0 ? `지금까지 ${won(D.total)} 썼고 예산이 ${won(diff)} 남았어요` : `지금까지 ${won(D.total)} 써서 예산을 ${won(-diff)} 넘었어요`);
+    head = `<div class="big" style="font-size:20px;color:${diff >= 0 ? "var(--accent)" : "var(--danger)"}">${msg}</div>
+      <div class="bar"><span class="lb">사용 ${pct}%</span><div class="bg"><i style="width:${Math.min(pct, 100)}%;${pct > 100 ? "background:var(--danger)" : ""}"></i></div><span class="val">${won(D.total)}</span></div>
+      <div class="line"><span>계획한 예산</span><b>${won(f.budget)}</b></div>`;
+  } else head = '<p class="note">예산 탭에서 총 예산을 정하면 계획과 비교해 드려요.</p>';
+  head += `<div class="line"><span>쓴 돈 (${D.filled}/${D.n}일 기록)</span><b>${won(D.total)} · ${fx(D.total)}</b></div>
+    <div class="line"><span>하루 평균</span><b>${won(D.total / Math.max(D.filled, 1))}</b></div>`;
+  const dayBudget = hasBudget && D.n ? f.budget / D.n : 0;
+  const maxDay = Math.max(...D.byDay.map(x => x.sum), dayBudget, 1);
+  const legend = CATS.map(c => `<span class="lg"><i class="dot" style="background:${COLORS[c]}"></i>${c}</span>`).join("");
+  const dayRows = D.byDay.map(x => `<div class="bar"><span class="lb">${x.d}일차</span><div class="bg stack">${CATS.map(c => x.cats[c] ? `<i style="width:${x.cats[c] / maxDay * 100}%;background:${COLORS[c]}"></i>` : "").join("")}${dayBudget ? `<u style="left:${dayBudget / maxDay * 100}%"></u>` : ""}</div><span class="val">${x.sum ? won(x.sum) : "-"}</span></div>`).join("");
+  const planAmt = c => hasBudget ? f.budget * (plan[c] || 0) / 100 : 0;
+  const maxC = Math.max(...CATS.map(c => Math.max(planAmt(c), D.byCat[c])), 1);
+  const cmp = CATS.map(c => {
+    const p = planAmt(c), a = D.byCat[c], over = hasBudget && a > p;
+    const note = hasBudget ? (a === 0 && p === 0 ? "" : over ? `${won(a - p)} 초과` : `${won(p - a)} 아낌`) : "";
+    return `<div class="cmp"><div class="cmp-h"><b>${c}</b><span style="color:${over ? "var(--danger)" : "var(--accent)"}">${note}</span></div>
+      ${hasBudget ? `<div class="bar"><span class="lb">계획</span><div class="bg"><i style="width:${p / maxC * 100}%;background:#4a5568"></i></div><span class="val">${won(p)}</span></div>` : ""}
+      <div class="bar"><span class="lb">실제</span><div class="bg"><i style="width:${a / maxC * 100}%;background:${over ? "var(--danger)" : COLORS[c]}"></i></div><span class="val">${won(a)}</span></div></div>`;
+  }).join("");
+  let acc = 0;
+  const used = CATS.filter(c => D.byCat[c] > 0);
+  const stops = used.map(c => { const p = D.byCat[c] / D.total * 100, s = `${COLORS[c]} ${acc}% ${acc + p}%`; acc += p; return s; }).join(", ");
+  const pieLegend = used.map(c => `<div class="line"><span><i class="dot" style="background:${COLORS[c]}"></i>${c}</span><b>${Math.round(D.byCat[c] / D.total * 100)}% · ${won(D.byCat[c])}</b></div>`).join("");
+  return `<div class="card"><h2>예산 비교</h2>${head}</div>
+    <div class="card"><h2>언제 얼마 썼나</h2><div class="legend">${legend}</div>${dayRows}${dayBudget ? `<p class="note">흰 세로선은 하루 예산(${won(dayBudget)})이에요.</p>` : ""}</div>
+    <div class="card"><h2>무엇에 썼나 (계획과 비교)</h2>${cmp}</div>
+    <div class="card"><h2>쓴 돈의 비율</h2><div class="pie" style="background:radial-gradient(circle at center, #171c25 0 42%, transparent 43%), conic-gradient(${stops})"></div>${pieLegend}</div>`;
+}
 function viewStats() {
   const t = trip();
-  if (!t || !t.expenses.some(e => e.amount > 0)) return '<div class="card"><h2>통계</h2><p class="empty">지출이 있으면 날짜별, 카테고리별 통계가 표시됩니다.</p></div>';
-  const c = compute(t);
-  const days = Object.keys(c.byDay).sort();
-  const span = Math.round((Date.parse(days[days.length - 1]) - Date.parse(days[0])) / 86400000) + 1;
-  const dayEntries = days.map(d => [d.slice(5).replace("-", "/"), c.byDay[d]]);
-  const catEntries = Object.entries(c.byCat).sort((a, b) => b[1] - a[1]);
-  const personEntries = t.members.map(m => [m.name, c.owe[m.id]]);
-  const paidEntries = t.members.map(m => [m.name, c.paid[m.id]]);
-  const top = dayEntries.slice().sort((a, b) => b[1] - a[1])[0];
-  return `<div class="card"><h2>요약</h2><div class="grid2">
-      <div class="stat"><span class="mute">총 지출</span><b>${won(c.total)}</b></div>
-      <div class="stat"><span class="mute">기간</span><b>${span}일</b></div>
-      <div class="stat"><span class="mute">하루 평균</span><b>${won(c.total / span)}</b></div>
-      <div class="stat"><span class="mute">가장 많이 쓴 날</span><b>${top[0]}</b></div></div></div>
-    <div class="card"><h2>날짜별 지출</h2>${bars(dayEntries, won)}</div>
-    <div class="card"><h2>카테고리별 지출</h2>${bars(catEntries, won, c.total)}</div>
-    <div class="card"><h2>사람별 부담 금액</h2>${bars(personEntries, won)}<h2 style="margin-top:16px">사람별 결제 금액</h2>${bars(paidEntries, won)}</div>
-    <div class="card"><h2>통화별 합계</h2>${Object.entries(c.byCur).map(([cur, v]) => `<div class="line"><span>${CURS[cur][0]}</span><span>${cs(cur)}${num(v.amt)} ≈ ${won(v.krw)}</span></div>`).join("")}</div>`;
+  if (!t) return startCard();
+  const f = fund(t);
+  if (!(f.days > 0)) return '<div class="card"><h2>지출 기록</h2><p class="empty">예산 탭에서 여행 일수를 먼저 정해 주세요. 정한 일수만큼 날짜별 입력칸이 생겨요.</p></div>';
+  const cur = f.cur || "JPY", n = Math.floor(f.days), dd = daily(t);
+  const hasData = d => CATS.some(c => parseFloat((dd[d] || {})[c]) > 0);
+  let openDay = n; for (let d = 1; d <= n; d++) if (!hasData(d)) { openDay = d; break; }
+  const daysHtml = Array.from({ length: n }, (_, i) => i + 1).map(d => `<details ${d === openDay ? "open" : ""}><summary>${d}일차 <span class="mute" data-dsum="${d}" style="display:inline;margin:0 0 0 6px">${daySumText(t, d)}</span></summary>
+    <div class="grid2">${CATS.map(c => `<div><label>${c}</label><input type="number" inputmode="decimal" step="any" data-dd="${d}|${c}" value="${(dd[d] || {})[c] > 0 ? dd[d][c] : ""}" placeholder="0"></div>`).join("")}</div></details>`).join("");
+  return `<div class="card"><h2>날짜별 지출 기록</h2>
+    <p class="note" style="margin-top:0">${cs(cur)} ${CURS[cur][0]} 기준으로 쓴 만큼 적어요. 이 기록이 예산과 비교돼요. (정산 탭은 함께 쓴 돈을 나누는 용도예요.)</p>${daysHtml}</div>
+    <div id="statsOut">${statsOut(t)}</div>`;
 }
 
 // ============ 화면: 공동경비 ============
@@ -355,11 +416,11 @@ function sentText(t, transfers) {
   return sentLabel(transfers.filter(x => t.sent[`${x.from}>${x.to}>${x.amt}`]).length, transfers.length);
 }
 function budgetInfo(t) {
-  const f = fund(t), used = t.expenses.filter(e => e.amount > 0);
+  const f = fund(t);
   if (!(f.budget > 0)) return '<p class="empty">총 예산을 넣으면 환전할 금액과 하루 한도를 보여 드려요.</p>';
   const cur = f.cur || "JPY", r = S.rates[cur] || 1, fd = r >= 100 ? 2 : 0;
   const fx = v => cs(cur) + num(v / r, fd);
-  const spent = used.reduce((s, e) => s + krwOf(e), 0), rest = f.budget - spent;
+  const D = dayData(t), spent = D.total, rest = f.budget - spent;
   const pct = Math.round(spent / f.budget * 100);
   let h = `<label style="margin-top:0">환전해 갈 금액 (예산 ÷ 환율)</label><div class="big">${fx(f.budget)}</div>
     <p class="note">1${ck(cur)} = ${num(r, 4)}원 기준이에요. 환전 수수료는 빠져 있어요. 환율은 환율 탭에서 고칠 수 있어요.</p>`;
@@ -369,8 +430,8 @@ function budgetInfo(t) {
   if (pct >= 100) h += '<p class="note" style="color:var(--danger)">예산을 넘었어요.</p>';
   else if (pct >= 80) h += '<p class="note" style="color:var(--danger)">예산의 80%를 넘었어요.</p>';
   if (f.days > 0) {
-    const left = f.days - new Set(used.map(e => e.date)).size;
-    h += left > 0 ? `<div class="line"><span>하루 권장 지출 (남은 ${left}일)</span><b>${won(Math.max(rest, 0) / left)} · ${fx(Math.max(rest, 0) / left)}</b></div><p class="note">지출을 입력한 날짜 수를 쓴 일수로 계산해요.</p>`
+    const left = f.days - D.filled;
+    h += left > 0 ? `<div class="line"><span>하루 권장 지출 (남은 ${left}일)</span><b>${won(Math.max(rest, 0) / left)} · ${fx(Math.max(rest, 0) / left)}</b></div><p class="note">통계 탭에 지출을 기록한 날짜 수를 쓴 일수로 계산해요.</p>`
       : '<p class="note">입력한 여행 일수를 모두 썼어요.</p>';
   }
   return h;
@@ -383,11 +444,7 @@ const STYLES = {
   "알뜰": { 식비: 30, 숙박: 30, 교통: 20, 쇼핑: 10, 기타: 10 }
 };
 function planOf(f) { if (!f.plan) { f.style = "균형"; f.plan = { ...STYLES["균형"] }; } return f.plan; }
-function spentByCat(t) {
-  const o = {};
-  t.expenses.filter(e => e.amount > 0).forEach(e => { const c = e.cat || guessCat(e.name || "") || "기타"; o[c] = (o[c] || 0) + krwOf(e); });
-  return o;
-}
+function spentByCat(t) { return dayData(t).byCat; }
 function planVals(t, c) {
   const f = fund(t), pct = planOf(f)[c] || 0, cur = f.cur || "JPY", r = S.rates[cur] || 1, fd = r >= 100 ? 2 : 0;
   const amt = f.budget > 0 ? f.budget * pct / 100 : 0, spent = spentByCat(t)[c] || 0;
@@ -547,6 +604,12 @@ $("view").addEventListener("click", e => { const b = e.target.closest("[data-act
 $("view").addEventListener("input", e => {
   const el = e.target, t = trip();
   if (el.dataset.b && t) { fund(t)[el.dataset.b] = el.dataset.b === "cur" ? el.value : (parseFloat(el.value) || 0); save(); $("budgetBox").innerHTML = budgetInfo(t); updatePlan(t); return; }
+  if (el.dataset.dd && t) {
+    const [d, c] = el.dataset.dd.split("|"), dd = daily(t); dd[d] = dd[d] || {}; dd[d][c] = parseFloat(el.value) || 0; save();
+    const so = $("statsOut"); if (so) so.innerHTML = statsOut(t);
+    const ds = document.querySelector(`[data-dsum="${d}"]`); if (ds) ds.textContent = daySumText(t, d);
+    return;
+  }
   if (el.dataset.p && t) {
     const f = fund(t); planOf(f)[el.dataset.p] = parseFloat(el.value) || 0; f.style = "";
     document.querySelectorAll(".stylechip").forEach(x => x.classList.remove("on")); save(); updatePlan(t); return;
