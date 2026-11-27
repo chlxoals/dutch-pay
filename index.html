@@ -4,10 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>여행·모임 정산</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f1319'/%3E%3Ccircle cx='32' cy='32' r='21' fill='none' stroke='%23c9a45c' stroke-width='4'/%3E%3Ctext x='32' y='41' font-size='26' font-weight='700' text-anchor='middle' fill='%23c9a45c' font-family='sans-serif'%3E%E2%82%A9%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<meta name="theme-color" content="#0f1319">
 <style>
   * { box-sizing: border-box; }
   :root { color-scheme: dark; --bg:#0f1319; --card:#171c25; --line:#262d3a; --text:#e4e7ec; --mute:#8d96a7; --accent:#c9a45c; --danger:#d9827f; }
-  body { margin: 0; font-family: -apple-system, "Malgun Gothic", sans-serif; background: var(--bg); color: var(--text); letter-spacing: -0.01em; }
+  body { margin: 0; font-family: Pretendard, -apple-system, "Malgun Gothic", sans-serif; background: var(--bg); color: var(--text); letter-spacing: -0.01em; }
   .wrap { max-width: 520px; margin: 0 auto; padding: 20px 16px 96px; }
   h1 { font-size: 20px; margin: 4px 0 2px; }
   h1::after { content: ""; display: block; width: 28px; height: 2px; background: var(--accent); margin-top: 10px; }
@@ -66,6 +69,9 @@
   .note { font-size: 12px; color: var(--mute); margin-top: 8px; line-height: 1.5; }
   input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  nav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 12px; padding: 8px 4px; }
+  nav svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .logo { width: 28px; height: 28px; vertical-align: -7px; margin-right: 10px; }
   .tr.done { opacity: .55; }
   .tr.done b { text-decoration: line-through; }
   label.sentchk, label.fundchk { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; font-size: 14px; color: var(--text); }
@@ -80,15 +86,15 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>여행·모임 정산</h1>
+  <h1><svg class="logo" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#171c25"/><circle cx="32" cy="32" r="21" fill="none" stroke="#c9a45c" stroke-width="4"/><text x="32" y="41" font-size="26" font-weight="700" text-anchor="middle" fill="#c9a45c" font-family="sans-serif">₩</text></svg>여행·모임 정산</h1>
   <p class="sub-title" id="tripLine"></p>
   <div id="view"></div>
 </div>
 <nav><div class="in">
-  <button data-tab="home">정산</button>
-  <button data-tab="rates">환율</button>
-  <button data-tab="stats">통계</button>
-  <button data-tab="fund">공동경비</button>
+  <button data-tab="home"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"/><path d="M9 8h6M9 12h6"/></svg><span>정산</span></button>
+  <button data-tab="rates"><svg viewBox="0 0 24 24"><path d="M7 7h13M16 3l4 4-4 4M17 17H4M8 13l-4 4 4 4"/></svg><span>환율</span></button>
+  <button data-tab="stats"><svg viewBox="0 0 24 24"><path d="M5 20v-6M12 20V4M19 20v-10"/></svg><span>통계</span></button>
+  <button data-tab="fund"><svg viewBox="0 0 24 24"><path d="M3 7h15a3 3 0 0 1 3 3v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><path d="M3 7l12-3v3M17 14h2"/></svg><span>공동경비</span></button>
 </div></nav>
 <div id="toast"></div>
 
@@ -206,7 +212,7 @@ function rowHtml(e, i, t) {
     <label>금액 (<span data-sym>${cs(e.cur)}</span>)</label>
     <input data-f="amount" type="number" step="any" inputmode="decimal" placeholder="예: 5800" value="${e.amount > 0 ? e.amount : ""}">
     <p class="note" data-hint>${hintText(e)}</p>
-    ${fund(t).contribs.length ? `<label class="fundchk"><input type="checkbox" data-f="fund" ${e.fromFund ? "checked" : ""}> 공동경비로 결제</label>` : ""}
+    ${fund(t).per > 0 ? `<label class="fundchk"><input type="checkbox" data-f="fund" ${e.fromFund ? "checked" : ""}> 공동경비로 결제</label>` : ""}
     <details><summary>자세히 (항목, 날짜, 함께한 사람, 환율)</summary>
       <label>항목 이름 (선택)</label><input data-f="name" type="text" placeholder="예: 라멘, 택시" value="${esc(e.name || "")}">
       <div class="row"><div><label>카테고리</label><select data-f="cat">${catOpts}</select></div>
@@ -331,7 +337,7 @@ function viewStats() {
 }
 
 // ============ 화면: 공동경비 ============
-function fund(t) { t.fund = t.fund || { contribs: [], budget: 0, days: 0 }; t.sent = t.sent || {}; return t.fund; }
+function fund(t) { t.fund = t.fund || { per: 0, budget: 0, days: 0 }; t.sent = t.sent || {}; return t.fund; }
 const krwOf = e => Math.round(e.amount * e.rate);
 const sentLabel = (n, m) => `${n}/${m} 송금 완료` + (m > 0 && n === m ? " · 정산 끝!" : "");
 function sentText(t, transfers) {
@@ -358,7 +364,7 @@ function viewFund() {
   const t = trip();
   if (!t) return '<div class="card"><h2>공동경비</h2><p class="empty">먼저 정산 탭에서 여행을 시작해 주세요.</p></div>';
   const f = fund(t), used = t.expenses.filter(e => e.amount > 0);
-  const total = f.contribs.reduce((s, x) => s + x.amount, 0);
+  const total = (f.per || 0) * t.members.length;
   const spent = used.filter(e => e.fromFund).reduce((s, e) => s + krwOf(e), 0);
   const left = total - spent;
   let status;
@@ -367,17 +373,14 @@ function viewFund() {
       <div class="stat"><span class="mute">쓴 돈</span><b>${won(spent)}</b></div>
       <div class="stat"><span class="mute">남은 돈</span><b>${won(left)}</b></div></div>`;
     if (left > 0) {
-      const per = t.members.map(m => ({ m, amt: f.contribs.filter(x => x.who === m.id).reduce((s, x) => s + x.amount, 0) })).filter(p => p.amt > 0);
-      const parts = split(left, per.map(p => p.amt));
-      status += `<h2 style="margin-top:16px">여행이 끝나면 돌려줄 돈 (낸 비율대로)</h2>` + per.map((p, k) => `<div class="line"><span>${esc(p.m.name)}</span><b>${won(parts[k])}</b></div>`).join("");
+      const parts = split(left, t.members.map(() => 1));
+      status += `<h2 style="margin-top:16px">여행이 끝나면 한 명당 돌려줄 돈</h2>` + t.members.map((m, k) => `<div class="line"><span>${esc(m.name)}</span><b>${won(parts[k])}</b></div>`).join("");
     } else if (left < 0) status += `<p class="note" style="color:var(--danger)">공동경비가 ${won(-left)} 부족해요. 부족한 지출은 정산 탭에서 "공동경비로 결제"를 풀고 개인 결제로 넣어 주세요.</p>`;
     else status += '<p class="note">공동경비를 모두 썼어요.</p>';
-  } else status = '<p class="empty">각자 낸 돈을 넣으면 남은 돈을 보여 드려요.</p>';
-  return `<div class="card"><h2>공동경비 모으기</h2>
-    ${t.members.length ? `<div class="row"><div><label>누가 냈나요</label><select id="fWho">${t.members.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join("")}</select></div>
-      <div><label>금액 (원)</label><input id="fAmt" type="number" inputmode="numeric" placeholder="예: 100000"></div></div>
-      <button class="full" data-act="addContrib">추가</button>` : '<p class="empty">정산 탭에서 참여자를 먼저 추가해 주세요.</p>'}
-    ${f.contribs.map(x => `<div class="exp"><div class="top"><b>${esc(nameOf(t, x.who))} · ${won(x.amount)}</b><button class="del" data-act="delContrib" data-id="${x.id}">삭제</button></div></div>`).join("")}</div>
+  } else status = '<p class="empty">1인당 낸 금액을 넣으면 남은 돈을 보여 드려요.</p>';
+  return `<div class="card"><h2>공동경비</h2>
+    <label>1인당 낸 금액 (원)</label><input type="number" inputmode="numeric" data-b="per" value="${f.per || ""}" placeholder="예: 100000">
+    <p class="note">${t.members.length ? `${t.members.length}명 × ${won(f.per || 0)} = 모인 돈 ${won(total)}` : "정산 탭에서 참여자를 먼저 추가해 주세요."}</p></div>
     <div class="card"><h2>공동경비 현황</h2>${status}</div>
     <div class="card"><h2>예산</h2><div class="row"><div><label>총 예산 (원)</label><input type="number" inputmode="numeric" data-b="budget" value="${f.budget || ""}" placeholder="예: 1000000"></div>
       <div><label>여행 일수</label><input type="number" inputmode="numeric" data-b="days" value="${f.days || ""}" placeholder="예: 6"></div></div>
@@ -411,7 +414,7 @@ function updateCalc() {
 
 // ============ 동작 ============
 function newTrip(name) {
-  const t = { id: uid(), name: name || "새 여행", members: [], expenses: [], exch: [], fund: { contribs: [], budget: 0, days: 0 }, sent: {} };
+  const t = { id: uid(), name: name || "새 여행", members: [], expenses: [], exch: [], fund: { per: 0, budget: 0, days: 0 }, sent: {} };
   S.trips.push(t); S.cur = t.id; save(); return t;
 }
 function importFromHash() {
@@ -525,6 +528,7 @@ $("view").addEventListener("keydown", e => {
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => { tab = b.dataset.tab; render(); window.scrollTo(0, 0); });
 
 $("view").addEventListener("change", e => {
+  if (e.target.dataset.b === "per") { render(); return; }
   const k = e.target.dataset.sent; if (k === undefined) return;
   const t = trip(); if (!t) return; fund(t);
   t.sent[k] = e.target.checked; save();
