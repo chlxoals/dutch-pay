@@ -64,6 +64,9 @@
   textarea { width: 100%; font-size: 13px; padding: 10px; border: 1px solid #2f3746; border-radius: 6px; background: var(--bg); color: var(--text); min-height: 120px; margin-top: 10px; }
   #toast { position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 6px; font-size: 14px; display: none; z-index: 9; max-width: 90%; }
   .note { font-size: 12px; color: var(--mute); margin-top: 8px; line-height: 1.5; }
+  details { margin-top: 10px; }
+  summary { color: var(--accent); cursor: pointer; font-size: 14px; padding: 8px 0; }
+  .big-tr { font-size: 18px; padding: 14px 12px; }
 </style>
 </head>
 <body>
@@ -176,29 +179,33 @@ function viewHome() {
     <button class="full" data-act="goTrips">여행 만들기</button>
     <button class="full sub" data-act="demo">예시 여행으로 체험하기</button></div>`;
   if (!form.payer || !t.members.some(m => m.id === form.payer)) form.payer = t.members[0] ? t.members[0].id : "";
-  const memberCard = `<div class="card"><h2>1. 참여자</h2>
-    <div class="row"><div><input id="mName" type="text" placeholder="이름 (예: 민수)" enterkeyhint="done"></div><button data-act="addMember">추가</button></div>
-    ${t.members.length ? t.members.map(m => `<div class="mem"><b>${esc(m.name)}</b>
-      <input type="number" step="0.5" min="0.5" inputmode="decimal" value="${m.weight}" data-w="${m.id}" aria-label="인분"><span class="mute" style="margin:0">인분</span>
-      <button class="del" data-act="delMember" data-id="${m.id}">삭제</button></div>`).join("") : '<p class="empty">참여자를 2명 이상 추가해 주세요.</p>'}</div>`;
+  const memberCard = `<div class="card"><h2>참여자</h2>
+    <div class="row"><div><input id="mName" type="text" placeholder="이름 입력 후 추가 (예: 민수)" enterkeyhint="done"></div><button data-act="addMember">추가</button></div>
+    ${t.members.length ? `<div class="chips">${t.members.map(m => `<span class="chip">${esc(m.name)} <button class="del" data-act="delMember" data-id="${m.id}">✕</button></span>`).join("")}</div>
+      <details><summary>인분 비율 설정 (선택)</summary><p class="note" style="margin-top:0">술을 안 마신 사람처럼 덜 내야 하면 낮춰 주세요. 기본은 모두 1입니다.</p>
+      ${t.members.map(m => `<div class="mem"><b>${esc(m.name)}</b>
+        <input type="number" step="0.5" min="0.5" inputmode="decimal" value="${m.weight}" data-w="${m.id}" aria-label="인분"><span class="mute" style="margin:0">인분</span></div>`).join("")}</details>`
+      : '<p class="empty">참여자를 2명 이상 추가해 주세요.</p>'}</div>`;
 
   let formCard = "";
   if (t.members.length >= 2) {
     const curOpts = Object.keys(CURS).map(c => `<option value="${c}" ${form.cur === c ? "selected" : ""}>${cs(c)} ${CURS[c][0]}</option>`).join("");
-    formCard = `<div class="card"><h2>2. 지출 입력</h2>
-      <div class="row"><div><label>날짜</label><input id="eDate" type="date" value="${form.date}"></div>
-      <div><label>결제한 사람</label><select id="ePayer">${t.members.map(m => `<option value="${m.id}" ${form.payer === m.id ? "selected" : ""}>${esc(m.name)}</option>`).join("")}</select></div></div>
-      <label>항목 이름 (선택)</label><input id="eName" type="text" placeholder="예: 라멘, 택시">
-      <label>카테고리</label><div class="chips" id="catChips">${CATS.map(c => `<button class="chip ${form.cat === c ? "on" : ""}" data-act="cat" data-v="${c}">${c}</button>`).join("")}</div>
-      <div class="row"><div><label>금액 (<span id="eSym">${cs(form.cur)}</span>)</label><input id="eAmt" type="number" step="any" inputmode="decimal" placeholder="예: 5800"></div>
+    formCard = `<div class="card"><h2>함께 쓴 돈 입력</h2>
+      <div class="row"><div><label>누가 냈나요</label><select id="ePayer">${t.members.map(m => `<option value="${m.id}" ${form.payer === m.id ? "selected" : ""}>${esc(m.name)}</option>`).join("")}</select></div>
       <div><label>통화</label><select id="eCur">${curOpts}</select></div></div>
-      <label>환율 (1<span id="eUnit">${ck(form.cur)}</span> = 몇 원)</label>
-      <div class="row"><div><input id="eRate" type="number" step="any" inputmode="decimal" value="${S.rates[form.cur]}"></div>
-      <button class="sub small" data-act="rateBase">기준환율</button><button class="sub small" data-act="rateAvg">환전평균</button></div>
-      <p class="note" id="eHint">금액을 입력하면 원화 환산액이 보입니다.</p>
-      <label>함께한 사람 (체크한 사람끼리 인분 비율대로 나눔)</label>
-      <div class="checks" id="eMembers">${t.members.map(m => `<label><input type="checkbox" value="${m.id}" checked>${esc(m.name)}</label>`).join("")}</div>
-      <button class="full" data-act="addExp">지출 추가</button></div>`;
+      <label>금액 (<span id="eSym">${cs(form.cur)}</span>)</label><input id="eAmt" type="number" step="any" inputmode="decimal" placeholder="예: 5800">
+      <p class="note" id="eHint">금액을 입력하면 원화로 얼마인지 보여 드려요.</p>
+      <details><summary>자세히 입력 (날짜, 항목, 함께한 사람, 환율)</summary>
+        <div class="row"><div><label>날짜</label><input id="eDate" type="date" value="${form.date}"></div></div>
+        <label>항목 이름 (선택)</label><input id="eName" type="text" placeholder="예: 라멘, 택시">
+        <label>카테고리</label><div class="chips" id="catChips">${CATS.map(c => `<button class="chip ${form.cat === c ? "on" : ""}" data-act="cat" data-v="${c}">${c}</button>`).join("")}</div>
+        <label>환율 (1<span id="eUnit">${ck(form.cur)}</span> = 몇 원)</label>
+        <div class="row"><div><input id="eRate" type="number" step="any" inputmode="decimal" value="${S.rates[form.cur]}"></div>
+        <button class="sub small" data-act="rateBase">오늘 환율</button><button class="sub small" data-act="rateAvg">내 환전 평균</button></div>
+        <label>함께한 사람 (체크한 사람끼리 나눠요)</label>
+        <div class="checks" id="eMembers">${t.members.map(m => `<label><input type="checkbox" value="${m.id}" checked>${esc(m.name)}</label>`).join("")}</div>
+      </details>
+      <button class="full" data-act="addExp">추가</button></div>`;
   }
 
   const list = `<div class="card"><h2>지출 내역 (${t.expenses.length})</h2>${t.expenses.length ?
@@ -210,14 +217,14 @@ function viewHome() {
   let result = "";
   if (t.expenses.length) {
     const c = compute(t);
-    result = `<div class="card"><h2>3. 정산 결과 (원화 기준)</h2><p class="total">총 지출 ${won(c.total)}</p>
-      ${t.members.map(m => `<div class="line"><span>${esc(m.name)}${Number(m.weight) !== 1 ? ` (${m.weight}인분)` : ""}</span><span>부담 ${won(c.owe[m.id])} · 결제 ${won(c.paid[m.id])}</span></div>`).join("")}
-      <h2 style="margin-top:16px">송금 안내</h2>
-      ${c.transfers.length ? c.transfers.map(x => `<div class="tr">${esc(nameOf(t, x.from))} → ${esc(nameOf(t, x.to))} <b>${won(x.amt)}</b></div>`).join("") : '<p class="empty">보낼 금액이 없습니다.</p>'}
+    result = `<div class="card"><h2>정산 결과</h2>
+      ${c.transfers.length ? c.transfers.map(x => `<div class="tr big-tr">${esc(nameOf(t, x.from))} → ${esc(nameOf(t, x.to))} <b>${won(x.amt)}</b></div>`).join("") : '<p class="empty">보낼 금액이 없습니다.</p>'}
+      <details><summary>자세한 내역 보기</summary><p class="total" style="margin-top:8px">총 지출 ${won(c.total)}</p>
+      ${t.members.map(m => `<div class="line"><span>${esc(m.name)}${Number(m.weight) !== 1 ? ` (${m.weight}인분)` : ""}</span><span>부담 ${won(c.owe[m.id])} · 낸 돈 ${won(c.paid[m.id])}</span></div>`).join("")}</details>
       <button class="full" data-act="copyResult">결과 문구 복사</button>
       <button class="full sub" data-act="copyLink">여행 링크 복사 (친구에게 보내기)</button></div>`;
   }
-  return memberCard + formCard + list + result;
+  return memberCard + formCard + result + list;
 }
 
 // ============ 화면: 환율 ============
@@ -294,7 +301,7 @@ function render() {
 function updateHint() {
   if (!$("eHint")) return;
   const a = parseFloat($("eAmt").value), r = parseFloat($("eRate").value);
-  $("eHint").textContent = a > 0 && r > 0 ? `≈ ${won(Math.round(a * r))}` : "금액을 입력하면 원화 환산액이 보입니다.";
+  $("eHint").textContent = a > 0 && r > 0 ? `≈ ${won(Math.round(a * r))} (1${ck($("eCur").value)} = ${num(r, 4)}원 적용)` : "금액을 입력하면 원화로 얼마인지 보여 드려요.";
 }
 function updateCalc() {
   if (!$("cAmt")) return;
