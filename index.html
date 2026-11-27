@@ -123,7 +123,8 @@ const CURS = { // [이름, 참고용 기본 환율(1단위 = 원), 기호, 짧�
 };
 const cs = c => CURS[c][2];   // 기호 ($)
 const ck = c => CURS[c][3];   // 짧은 한글 이름 (달러)
-const CATS = ["식비", "교통", "숙박", "쇼핑", "기타"];
+const CATS = ["식비", "교통", "쇼핑", "기타"]; // 현지 예산·통계용 (숙박은 미리 예약해 따로 나누므로 제외)
+const ALLCATS = ["식비", "교통", "숙박", "쇼핑", "기타"]; // 정산 탭 지출 분류용
 const KEYWORDS = {
   교통: ["택시", "버스", "지하철", "전철", "기차", "공항", "렌트", "주유", "교통", "열차", "신칸센"],
   식비: ["식당", "라멘", "카페", "커피", "밥", "술", "맥주", "고기", "초밥", "점심", "저녁", "아침", "식비", "편의점", "우동", "빵"],
@@ -220,7 +221,7 @@ function blankRow(t) {
 }
 function rowHtml(e, i, t) {
   const curOpts = Object.keys(CURS).map(c => `<option value="${c}" ${e.cur === c ? "selected" : ""}>${cs(c)} ${CURS[c][0]}</option>`).join("");
-  const catOpts = ["", ...CATS].map(c => `<option value="${c}" ${(e.cat || "") === c ? "selected" : ""}>${c || "자동"}</option>`).join("");
+  const catOpts = ["", ...ALLCATS].map(c => `<option value="${c}" ${(e.cat || "") === c ? "selected" : ""}>${c || "자동"}</option>`).join("");
   return `<div class="erow" data-eid="${e.id}">
     <div class="erow-head"><b>${i + 1}</b><button class="del" data-act="delExp" data-id="${e.id}">삭제</button></div>
     <div class="row"><div><label>누가 냈나요</label><select data-f="payer">${t.members.map(m => `<option value="${m.id}" ${e.payer === m.id ? "selected" : ""}>${esc(m.name)}</option>`).join("")}</select></div>
@@ -438,12 +439,15 @@ function budgetInfo(t) {
 }
 // ---- 예산 나누기 (규칙 기반 추천 비율, 직접 수정 가능) ----
 const STYLES = {
-  "균형": { 식비: 35, 숙박: 25, 교통: 15, 쇼핑: 20, 기타: 5 },
-  "먹방": { 식비: 45, 숙박: 25, 교통: 10, 쇼핑: 15, 기타: 5 },
-  "쇼핑": { 식비: 25, 숙박: 25, 교통: 10, 쇼핑: 35, 기타: 5 },
-  "알뜰": { 식비: 30, 숙박: 30, 교통: 20, 쇼핑: 10, 기타: 10 }
+  "균형": { 식비: 45, 교통: 20, 쇼핑: 25, 기타: 10 },
+  "먹방": { 식비: 55, 교통: 15, 쇼핑: 20, 기타: 10 },
+  "쇼핑": { 식비: 35, 교통: 15, 쇼핑: 40, 기타: 10 },
+  "알뜰": { 식비: 45, 교통: 25, 쇼핑: 15, 기타: 15 }
 };
-function planOf(f) { if (!f.plan) { f.style = "균형"; f.plan = { ...STYLES["균형"] }; } return f.plan; }
+function planOf(f) {
+  if (!f.plan || "숙박" in f.plan) { f.style = STYLES[f.style] ? f.style : "균형"; f.plan = { ...STYLES[f.style] }; } // 예전(숙박 포함) 계획은 새 비율로 교체
+  return f.plan;
+}
 function spentByCat(t) { return dayData(t).byCat; }
 function planVals(t, c) {
   const f = fund(t), pct = planOf(f)[c] || 0, cur = f.cur || "JPY", r = S.rates[cur] || 1, fd = r >= 100 ? 2 : 0;
@@ -462,7 +466,7 @@ function planHtml(t) {
       <input type="number" inputmode="numeric" data-p="${c}" value="${plan[c] || 0}"><span class="mute" style="margin:0">%</span>
       <div class="pv"><b data-pv>${v.main}</b><small data-ps style="${v.over ? "color:var(--danger)" : ""}">${v.sub}</small></div></div>`; }).join("")}
     <p class="note" id="planSum">${planSumText(plan)}</p>
-    <p class="note">비율은 일반적인 예시예요. 실제 물가와 다를 수 있으니 직접 고쳐서 쓰세요. 항공권은 포함하지 않아요.</p>`;
+    <p class="note">비율은 일반적인 예시예요. 실제 물가와 다를 수 있으니 직접 고쳐서 쓰세요. 숙박과 항공권은 미리 예약하는 비용이라 포함하지 않아요.</p>`;
 }
 function updatePlan(t) {
   const plan = planOf(fund(t));
