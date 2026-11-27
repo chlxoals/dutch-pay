@@ -176,8 +176,7 @@ function guessCat(name) {
 function viewHome() {
   const t = trip();
   if (!t) return `<div class="card"><h2>시작하기</h2><p class="empty">먼저 여행(모임)을 만들어 주세요.</p>
-    <button class="full" data-act="goTrips">여행 만들기</button>
-    <button class="full sub" data-act="demo">예시 여행으로 체험하기</button></div>`;
+    <button class="full" data-act="goTrips">여행 만들기</button></div>`;
   if (!form.payer || !t.members.some(m => m.id === form.payer)) form.payer = t.members[0] ? t.members[0].id : "";
   const memberCard = `<div class="card"><h2>참여자</h2>
     <div class="row"><div><input id="mName" type="text" placeholder="이름 입력 후 추가 (예: 민수)" enterkeyhint="done"></div><button data-act="addMember">추가</button></div>
@@ -282,8 +281,7 @@ function viewStats() {
 // ============ 화면: 여행 ============
 function viewTrips() {
   return `<div class="card"><h2>새 여행(모임) 만들기</h2>
-    <div class="row"><div><input id="tName" type="text" placeholder="예: 도쿄 5박 6일" enterkeyhint="done"></div><button data-act="newTrip">만들기</button></div>
-    <button class="full sub" data-act="demo">예시 여행으로 체험하기</button></div>
+    <div class="row"><div><input id="tName" type="text" placeholder="예: 도쿄 5박 6일" enterkeyhint="done"></div><button data-act="newTrip">만들기</button></div></div>
     <div class="card"><h2>내 여행</h2>${S.trips.length ? S.trips.map(t => `<div class="exp"><div class="top"><b>${esc(t.name)}${t.id === S.cur ? " (선택됨)" : ""}</b>
       <span><button class="small sub" data-act="pickTrip" data-id="${t.id}">열기</button> <button class="del" data-act="delTrip" data-id="${t.id}">삭제</button></span></div>
       <small>${t.members.length}명 · 지출 ${t.expenses.length}건</small></div>`).join("") : '<p class="empty">아직 여행이 없습니다.</p>'}</div>`;
