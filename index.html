@@ -115,6 +115,7 @@ S.rates = Object.assign(defaultRates(), S.rates);
 S.trips = (S.trips || []).filter(t => !/\(예시\)$/.test(t.name));
 if (!S.trips.some(t => t.id === S.cur)) S.cur = S.trips[0] ? S.trips[0].id : null;
 let tab = "home";
+let showResult = false;
 let form = { date: today(), cur: "KRW", payer: "", cat: "", catAuto: true };
 let calcCur = "USD";
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
@@ -214,19 +215,19 @@ function viewHome() {
     [...t.expenses].reverse().map(e => `<div class="exp"><div class="top"><b>${esc(e.name || e.cat || "지출")} · ${cs(e.cur)}${num(e.amount)}</b>
       <button class="del" data-act="delExp" data-id="${e.id}">삭제</button></div>
       <small>${e.date} · ${esc(e.cat || "기타")} · ≈ ${won(Math.round(e.amount * e.rate))} (환율 ${num(e.rate, 4)}) · 결제 ${esc(nameOf(t, e.payer))} · 함께 ${e.members.map(id => esc(nameOf(t, id))).join(", ")}</small></div>`).join("")
-    : '<p class="empty">아직 지출이 없습니다.</p>'}</div>`;
+    : '<p class="empty">아직 지출이 없습니다.</p>'}${t.expenses.length ? '<button class="full" data-act="calc">정산하기</button>' : ""}</div>`;
 
   let result = "";
-  if (t.expenses.length) {
+  if (showResult && t.expenses.length) {
     const c = compute(t);
-    result = `<div class="card"><h2>정산 결과</h2>
+    result = `<div class="card" id="resultCard"><h2>정산 결과</h2>
       ${c.transfers.length ? c.transfers.map(x => `<div class="tr big-tr">${esc(nameOf(t, x.from))} → ${esc(nameOf(t, x.to))} <b>${won(x.amt)}</b></div>`).join("") : '<p class="empty">보낼 금액이 없습니다.</p>'}
       <details><summary>자세한 내역 보기</summary><p class="total" style="margin-top:8px">총 지출 ${won(c.total)}</p>
       ${t.members.map(m => `<div class="line"><span>${esc(m.name)}${Number(m.weight) !== 1 ? ` (${m.weight}인분)` : ""}</span><span>부담 ${won(c.owe[m.id])} · 낸 돈 ${won(c.paid[m.id])}</span></div>`).join("")}</details>
       <button class="full" data-act="copyResult">결과 문구 복사</button>
       <button class="full sub" data-act="copyLink">여행 링크 복사 (친구에게 보내기)</button></div>`;
   }
-  return memberCard + formCard + result + list;
+  return memberCard + formCard + list + result;
 }
 
 // ============ 화면: 환율 ============
@@ -372,9 +373,10 @@ function act(a, b) {
     const name = $("eName").value.trim();
     form.date = $("eDate").value || today(); form.cur = $("eCur").value; form.payer = $("ePayer").value;
     t.expenses.push({ id: uid(), date: form.date, name, cat: form.cat || guessCat(name) || "기타", amount, cur: form.cur, rate, payer: form.payer, members: mem });
-    form.cat = ""; form.catAuto = true; save(); render(); toast("지출을 추가했습니다");
+    form.cat = ""; form.catAuto = true; showResult = false; save(); render(); toast("추가했습니다. 다 넣었으면 아래 정산하기를 누르세요");
   }
-  if (a === "delExp") { t.expenses = t.expenses.filter(e => e.id !== b.dataset.id); save(); render(); }
+  if (a === "delExp") { t.expenses = t.expenses.filter(e => e.id !== b.dataset.id); showResult = false; save(); render(); }
+  if (a === "calc") { showResult = true; render(); setTimeout(() => { const r = $("resultCard"); if (r) r.scrollIntoView({ behavior: "smooth", block: "start" }); }, 50); }
   if (a === "copyResult") {
     const c = compute(t);
     let text = `[${t.name}] 총 ${won(c.total)}\n` + t.members.map(m => `- ${m.name}: 부담 ${won(c.owe[m.id])}`).join("\n") + "\n\n[송금]\n" +
