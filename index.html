@@ -72,6 +72,12 @@
   nav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 12px; padding: 8px 4px; }
   nav svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .logo { width: 28px; height: 28px; vertical-align: -7px; margin-right: 10px; }
+  .plan-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .plan-row:last-of-type { border-bottom: 0; }
+  .plan-row .pn { width: 40px; flex: none; font-size: 14px; }
+  .plan-row input { width: 62px; flex: none; padding: 8px; font-size: 15px; text-align: right; }
+  .pv { flex: 1; text-align: right; font-size: 14px; min-width: 0; }
+  .pv small { display: block; color: var(--mute); font-size: 12px; margin-top: 2px; }
   .tr.done { opacity: .55; }
   .tr.done b { text-decoration: line-through; }
   label.sentchk, label.fundchk { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; font-size: 14px; color: var(--text); }
@@ -243,11 +249,17 @@ function rowUpdate(el) {
   return true;
 }
 
+// ============ 여행 시작 카드 (어느 탭에서든 사용) ============
+function startCard() {
+  return `<div class="card"><h2>새 여행 시작</h2>
+    <div class="row"><div><input id="tName" type="text" placeholder="여행 이름 (예: 도쿄 5박 6일)" enterkeyhint="done"></div><button data-act="newTrip">시작</button></div>
+    <p class="note">이름만 정하면 시작할 수 있어요. 출발 전에는 예산 탭, 여행 후에는 정산 탭을 쓰세요.</p></div>`;
+}
+
 // ============ 화면: 정산 ============
 function viewHome() {
   const t = trip();
-  if (!t) return `<div class="card"><h2>새 여행 시작</h2>
-    <div class="row"><div><input id="tName" type="text" placeholder="여행 이름 (예: 도쿄 5박 6일)" enterkeyhint="done"></div><button data-act="newTrip">시작</button></div></div>`;
+  if (!t) return startCard();
   if (!form.payer || !t.members.some(m => m.id === form.payer)) form.payer = t.members[0] ? t.members[0].id : "";
   const memberCard = `<div class="card"><h2>참여자</h2>
     <div class="row"><div><input id="mName" type="text" placeholder="이름 입력 후 추가 (예: 민수)" enterkeyhint="done"></div><button data-act="addMember">추가</button></div>
@@ -363,15 +375,57 @@ function budgetInfo(t) {
   }
   return h;
 }
+// ---- 예산 나누기 (규칙 기반 추천 비율, 직접 수정 가능) ----
+const STYLES = {
+  "균형": { 식비: 35, 숙박: 25, 교통: 15, 쇼핑: 20, 기타: 5 },
+  "먹방": { 식비: 45, 숙박: 25, 교통: 10, 쇼핑: 15, 기타: 5 },
+  "쇼핑": { 식비: 25, 숙박: 25, 교통: 10, 쇼핑: 35, 기타: 5 },
+  "알뜰": { 식비: 30, 숙박: 30, 교통: 20, 쇼핑: 10, 기타: 10 }
+};
+function planOf(f) { if (!f.plan) { f.style = "균형"; f.plan = { ...STYLES["균형"] }; } return f.plan; }
+function spentByCat(t) {
+  const o = {};
+  t.expenses.filter(e => e.amount > 0).forEach(e => { const c = e.cat || guessCat(e.name || "") || "기타"; o[c] = (o[c] || 0) + krwOf(e); });
+  return o;
+}
+function planVals(t, c) {
+  const f = fund(t), pct = planOf(f)[c] || 0, cur = f.cur || "JPY", r = S.rates[cur] || 1, fd = r >= 100 ? 2 : 0;
+  const amt = f.budget > 0 ? f.budget * pct / 100 : 0, spent = spentByCat(t)[c] || 0;
+  return {
+    main: f.budget > 0 ? `${won(amt)} · ${cs(cur)}${num(amt / r, fd)}` : "예산을 먼저 넣어 주세요",
+    sub: f.budget > 0 ? `${f.days > 0 ? "하루 " + won(amt / f.days) + " · " : ""}쓴 돈 ${won(spent)}` : "",
+    over: f.budget > 0 && spent > amt
+  };
+}
+const planSumText = plan => { const s = CATS.reduce((a, c) => a + (plan[c] || 0), 0); return s === 100 ? "합계 100%" : `합계 ${s}% (100%가 되도록 맞춰 주세요)`; };
+function planHtml(t) {
+  const f = fund(t), plan = planOf(f);
+  return `<div class="chips">${Object.keys(STYLES).map(s => `<button class="chip stylechip ${f.style === s ? "on" : ""}" data-act="planStyle" data-v="${s}">${s}</button>`).join("")}</div>
+    ${CATS.map(c => { const v = planVals(t, c); return `<div class="plan-row" data-cat="${c}"><span class="pn">${c}</span>
+      <input type="number" inputmode="numeric" data-p="${c}" value="${plan[c] || 0}"><span class="mute" style="margin:0">%</span>
+      <div class="pv"><b data-pv>${v.main}</b><small data-ps style="${v.over ? "color:var(--danger)" : ""}">${v.sub}</small></div></div>`; }).join("")}
+    <p class="note" id="planSum">${planSumText(plan)}</p>
+    <p class="note">비율은 일반적인 예시예요. 실제 물가와 다를 수 있으니 직접 고쳐서 쓰세요. 항공권은 포함하지 않아요.</p>`;
+}
+function updatePlan(t) {
+  const plan = planOf(fund(t));
+  document.querySelectorAll(".plan-row").forEach(row => {
+    const v = planVals(t, row.dataset.cat);
+    row.querySelector("[data-pv]").textContent = v.main;
+    const s = row.querySelector("[data-ps]"); s.textContent = v.sub; s.style.color = v.over ? "var(--danger)" : "";
+  });
+  const ps = $("planSum"); if (ps) ps.textContent = planSumText(plan);
+}
 function viewBudget() {
   const t = trip();
-  if (!t) return '<div class="card"><h2>예산</h2><p class="empty">먼저 정산 탭에서 여행을 시작해 주세요.</p></div>';
+  if (!t) return startCard();
   const f = fund(t), cur = f.cur || "JPY";
   return `<div class="card"><h2>예산 설정</h2>
     <label style="margin-top:0">총 예산 (원)</label><input type="number" inputmode="numeric" data-b="budget" value="${f.budget || ""}" placeholder="예: 1000000">
-    <div class="row"><div><label>여행 일수</label><input type="number" inputmode="numeric" data-b="days" value="${f.days || ""}" placeholder="예: 6"></div>
+    <div class="row"><div><label>여행 일수 (3박 4일은 4)</label><input type="number" inputmode="numeric" data-b="days" value="${f.days || ""}" placeholder="예: 6"></div>
     <div><label>현지 통화</label><select data-b="cur">${Object.keys(CURS).filter(c => c !== "KRW").map(c => `<option value="${c}" ${c === cur ? "selected" : ""}>${cs(c)} ${CURS[c][0]}</option>`).join("")}</select></div></div></div>
-    <div class="card"><h2>환전과 한도</h2><div id="budgetBox">${budgetInfo(t)}</div></div>`;
+    <div class="card"><h2>환전과 한도</h2><div id="budgetBox">${budgetInfo(t)}</div></div>
+    <div class="card"><h2>예산 나누기 (카테고리별 계획)</h2>${planHtml(t)}</div>`;
 }
 
 // ============ 렌더 ============
@@ -430,17 +484,12 @@ async function fetchRates() {
 
 function act(a, b) {
   const t = trip();
-  if (a === "addContrib") {
-    const amt = parseInt($("fAmt").value, 10);
-    if (!(amt > 0)) { alert("금액을 입력해 주세요."); return; }
-    fund(t).contribs.push({ id: uid(), who: $("fWho").value, amount: amt }); save(); render();
-  }
-  if (a === "delContrib") { fund(t).contribs = fund(t).contribs.filter(x => x.id !== b.dataset.id); save(); render(); }
+  if (a === "planStyle") { const f = fund(t); f.plan = { ...STYLES[b.dataset.v] }; f.style = b.dataset.v; save(); render(); }
   if (a === "resetAll") {
     if (!t || !confirm(`"${t.name}" 여행의 참여자와 입력한 내용이 모두 지워지고 처음 화면으로 돌아갑니다. 계속할까요?`)) return;
     S.trips = S.trips.filter(x => x.id !== t.id); S.cur = null; showResult = false; form.payer = ""; save(); tab = "home"; render(); window.scrollTo(0, 0);
   }
-  if (a === "newTrip") { const v = $("tName").value.trim(); if (!v) { alert("여행 이름을 입력해 주세요."); return; } newTrip(v); tab = "home"; render(); }
+  if (a === "newTrip") { const v = $("tName").value.trim(); if (!v) { alert("여행 이름을 입력해 주세요."); return; } newTrip(v); render(); }
   if (a === "pickTrip") { S.cur = b.dataset.id; save(); tab = "home"; render(); }
   if (a === "delTrip") { if (!confirm("이 여행을 삭제할까요? 되돌릴 수 없습니다.")) return; S.trips = S.trips.filter(x => x.id !== b.dataset.id); if (S.cur === b.dataset.id) S.cur = S.trips[0] ? S.trips[0].id : null; save(); render(); }
   if (a === "addMember") {
@@ -497,7 +546,11 @@ function act(a, b) {
 $("view").addEventListener("click", e => { const b = e.target.closest("[data-act]"); if (b) act(b.dataset.act, b); });
 $("view").addEventListener("input", e => {
   const el = e.target, t = trip();
-  if (el.dataset.b && t) { fund(t)[el.dataset.b] = el.dataset.b === "cur" ? el.value : (parseFloat(el.value) || 0); save(); $("budgetBox").innerHTML = budgetInfo(t); return; }
+  if (el.dataset.b && t) { fund(t)[el.dataset.b] = el.dataset.b === "cur" ? el.value : (parseFloat(el.value) || 0); save(); $("budgetBox").innerHTML = budgetInfo(t); updatePlan(t); return; }
+  if (el.dataset.p && t) {
+    const f = fund(t); planOf(f)[el.dataset.p] = parseFloat(el.value) || 0; f.style = "";
+    document.querySelectorAll(".stylechip").forEach(x => x.classList.remove("on")); save(); updatePlan(t); return;
+  }
   if (el.dataset.f && rowUpdate(el)) return;
   if (el.id === "eAmt" || el.id === "eRate") updateHint();
   if (el.id === "eName" && form.catAuto) { const g = guessCat(el.value); form.cat = g; document.querySelectorAll("#catChips .chip").forEach(x => x.classList.toggle("on", x.dataset.v === g)); }
