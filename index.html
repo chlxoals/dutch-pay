@@ -371,6 +371,12 @@ function statsOut(t) {
   } else head = '<p class="note">예산 탭에서 총 예산을 정하면 계획과 비교해 드려요.</p>';
   head += `<div class="line"><span>쓴 돈 (${D.filled}/${D.n}일 기록)</span><b>${won(D.total)} · ${fx(D.total)}</b></div>
     <div class="line"><span>하루 평균</span><b>${won(D.total / Math.max(D.filled, 1))}</b></div>`;
+  if (hasBudget) {
+    const rest = f.budget - D.total, left = D.n - D.filled, pct2 = Math.round(D.total / f.budget * 100);
+    if (left > 0) head += `<div class="line"><span>하루 권장 지출 (남은 ${left}일)</span><b>${won(Math.max(rest, 0) / left)} · ${fx(Math.max(rest, 0) / left)}</b></div>`;
+    if (pct2 > 100) head += '<p class="note" style="color:var(--danger)">예산을 넘었어요.</p>';
+    else if (pct2 >= 80) head += '<p class="note" style="color:var(--danger)">예산의 80%를 넘었어요.</p>';
+  }
   const dayBudget = hasBudget && D.n ? f.budget / D.n : 0;
   const maxDay = Math.max(...D.byDay.map(x => x.sum), dayBudget, 1);
   const legend = CATS.map(c => `<span class="lg"><i class="dot" style="background:${COLORS[c]}"></i>${c}</span>`).join("");
@@ -421,20 +427,9 @@ function budgetInfo(t) {
   if (!(f.budget > 0)) return '<p class="empty">총 예산을 넣으면 환전할 금액과 하루 한도를 보여 드려요.</p>';
   const cur = f.cur || "JPY", r = S.rates[cur] || 1, fd = r >= 100 ? 2 : 0;
   const fx = v => cs(cur) + num(v / r, fd);
-  const D = dayData(t), spent = D.total, rest = f.budget - spent;
-  const pct = Math.round(spent / f.budget * 100);
   let h = `<label style="margin-top:0">환전해 갈 금액 (예산 ÷ 환율)</label><div class="big">${fx(f.budget)}</div>
     <p class="note">1${ck(cur)} = ${num(r, 4)}원 기준이에요. 환전 수수료는 빠져 있어요. 환율은 환율 탭에서 고칠 수 있어요.</p>`;
   if (f.days > 0) h += `<div class="line"><span>하루 한도 (${f.days}일)</span><b>${won(f.budget / f.days)} · ${fx(f.budget / f.days)}</b></div>`;
-  h += `<h2 style="margin-top:16px">사용 현황</h2><div class="bar"><span class="lb">사용 ${pct}%</span><div class="bg"><i style="width:${Math.min(pct, 100)}%;${pct >= 80 ? "background:var(--danger)" : ""}"></i></div><span class="val">${won(spent)}</span></div>
-    <div class="line"><span>남은 예산</span><b>${won(rest)} · ${fx(Math.max(rest, 0))}</b></div>`;
-  if (pct >= 100) h += '<p class="note" style="color:var(--danger)">예산을 넘었어요.</p>';
-  else if (pct >= 80) h += '<p class="note" style="color:var(--danger)">예산의 80%를 넘었어요.</p>';
-  if (f.days > 0) {
-    const left = f.days - D.filled;
-    h += left > 0 ? `<div class="line"><span>하루 권장 지출 (남은 ${left}일)</span><b>${won(Math.max(rest, 0) / left)} · ${fx(Math.max(rest, 0) / left)}</b></div><p class="note">통계 탭에 지출을 기록한 날짜 수를 쓴 일수로 계산해요.</p>`
-      : '<p class="note">입력한 여행 일수를 모두 썼어요.</p>';
-  }
   return h;
 }
 // ---- 예산 나누기 (규칙 기반 추천 비율, 직접 수정 가능) ----
@@ -454,8 +449,8 @@ function planVals(t, c) {
   const amt = f.budget > 0 ? f.budget * pct / 100 : 0, spent = spentByCat(t)[c] || 0;
   return {
     main: f.budget > 0 ? `${won(amt)} · ${cs(cur)}${num(amt / r, fd)}` : "예산을 먼저 넣어 주세요",
-    sub: f.budget > 0 ? `${f.days > 0 ? "하루 " + won(amt / f.days) + " · " : ""}쓴 돈 ${won(spent)}` : "",
-    over: f.budget > 0 && spent > amt
+    sub: f.budget > 0 && f.days > 0 ? "하루 " + won(amt / f.days) : "",
+    over: false
   };
 }
 const planSumText = plan => { const s = CATS.reduce((a, c) => a + (plan[c] || 0), 0); return s === 100 ? "합계 100%" : `합계 ${s}% (100%가 되도록 맞춰 주세요)`; };
