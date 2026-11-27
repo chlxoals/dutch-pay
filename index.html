@@ -183,6 +183,44 @@
   #resultCard button { background: var(--accent); color: #fff; }
   #resultCard button.sub { background: #eaf0ff; color: var(--accent); border: 0; }
   /* ===== DESIGN-V3 END ===== */
+
+  /* ===== DESIGN-V3N START: 눈이 편한 밤하늘 톤 (밝은 V3로 되돌리려면 START~END 블록을 지우세요) ===== */
+  :root { color-scheme: dark; --bg: #0e1424; --card: #161e33; --line: #243049; --text: #e8ecf7; --mute: #97a1bd; --accent: #8fb0ff; --danger: #ff7b7f; }
+  body { background: #0e1424; color: var(--text); }
+  body::before { background: linear-gradient(135deg, #172a73 0%, #20409f 60%, #2a52c0 100%); }
+  h1 { color: #fff; }
+  h2 { color: var(--text); }
+  .card { background: #161e33; box-shadow: 0 12px 30px -18px rgba(0,0,0,.9); }
+  input, select, textarea { background: #0f1729; color: var(--text); }
+  input::placeholder, textarea::placeholder { color: #67718f; }
+  input:focus, select:focus, textarea:focus { background: #0f1729; border-color: var(--accent); box-shadow: 0 0 0 4px rgba(143,176,255,.16); }
+  button { background: #3d6bff; color: #fff; }
+  button.sub { background: #202c4a; color: #a9c1ff; }
+  a.btn { background: #3d6bff; color: #fff; }
+  .chip, .checks label { background: #1d2740; color: var(--text); }
+  .chip.on { background: #263a75; border-color: var(--accent); color: #d6e3ff; }
+  .erow { background: #121a2e; border-color: #223052; }
+  .erow-head b { color: var(--accent); }
+  .stat { background: #1d2740; }
+  .bar .bg { background: #0f1729; }
+  .bar .bg.stack u { background: #fff; opacity: .7; }
+  .big { color: var(--accent); }
+  .hero { background: linear-gradient(160deg, #1b2850 0%, #161e33 70%); }
+  nav { background: rgba(12,18,34,.94); border-top-color: var(--line); }
+  nav button { color: #7f8aab; }
+  nav button.on { color: var(--accent); border-top-color: var(--accent); }
+  details summary { color: var(--accent); }
+  #toast { background: #e8ecf7; color: #0e1a3a; }
+  #resultCard { background: #1b2744; color: var(--text); }
+  #resultCard h2 { color: var(--accent); border-bottom-color: #34456b; }
+  #resultCard .tr { border-bottom-color: #2c3a5c; }
+  #resultCard .tr b { color: #fff; }
+  #resultCard label.sentchk, #resultCard .note, #resultCard .empty { color: var(--mute); }
+  #resultCard .line { border-bottom-color: #2c3a5c; color: var(--text); }
+  #resultCard summary { color: var(--accent); }
+  #resultCard button { background: #3d6bff; color: #fff; }
+  #resultCard button.sub { background: #263a75; color: #d6e3ff; }
+  /* ===== DESIGN-V3N END ===== */
 </style>
 </head>
 <body>
@@ -421,7 +459,7 @@ function bars(entries, fmt, total) {
   return entries.map(([k, v]) => `<div class="bar"><span class="lb">${esc(k)}</span><div class="bg"><i style="width:${Math.round(v / max * 100)}%"></i></div><span class="val">${fmt(v)}${total ? " · " + Math.round(v / total * 100) + "%" : ""}</span></div>`).join("");
 }
 // 날짜별·카테고리별로 직접 적은 지출(현지 통화)을 원화로 환산해 모아 둔다
-const COLORS = { 식비: "#ff7a45", 교통: "#1f5eff", 숙박: "#7a5cff", 쇼핑: "#12a37f", 기타: "#8f99b8" };
+const COLORS = { 식비: "#ff8a5c", 교통: "#5b8bff", 숙박: "#9a85ff", 쇼핑: "#2fc79a", 기타: "#8f99b8" };
 function daily(t) { t.daily = t.daily || {}; return t.daily; }
 function dayData(t) {
   const f = fund(t), cur = f.cur || "JPY", r = S.rates[cur] || 1, n = f.days > 0 ? Math.floor(f.days) : 0;
@@ -472,7 +510,7 @@ function statsOut(t) {
     const p = planAmt(c), a = D.byCat[c], over = hasPlan && a > p;
     const note = hasPlan ? (a === 0 && p === 0 ? "" : over ? `${won(a - p)} 초과` : `${won(p - a)} 아낌`) : "";
     return `<div class="cmp"><div class="cmp-h"><b>${c}</b><span style="color:${over ? "var(--danger)" : "var(--accent)"}">${note}</span></div>
-      ${hasPlan ? `<div class="bar"><span class="lb">계획</span><div class="bg"><i style="width:${p / maxC * 100}%;background:#c5cde3"></i></div><span class="val">${won(p)}</span></div>` : ""}
+      ${hasPlan ? `<div class="bar"><span class="lb">계획</span><div class="bg"><i style="width:${p / maxC * 100}%;background:#3b4a6e"></i></div><span class="val">${won(p)}</span></div>` : ""}
       <div class="bar"><span class="lb">실제</span><div class="bg"><i style="width:${a / maxC * 100}%;background:${over ? "var(--danger)" : COLORS[c]}"></i></div><span class="val">${won(a)}</span></div></div>`;
   }).join("");
   let acc = 0;
@@ -482,7 +520,7 @@ function statsOut(t) {
   return `<div class="card"><h2>예산 비교</h2>${head}</div>
     <div class="card"><h2>언제 얼마 썼나</h2><div class="legend">${legend}</div>${dayRows}${dayBudget ? `<p class="note">흰 세로선은 하루 예산(${won(dayBudget)})이에요.</p>` : ""}</div>
     <div class="card"><h2>무엇에 썼나 (계획과 비교)</h2>${cmp}</div>
-    <div class="card"><h2>쓴 돈의 비율</h2><div class="pie" style="background:radial-gradient(circle at center, #fff 0 42%, transparent 43%), conic-gradient(${stops})"></div>${pieLegend}</div>`;
+    <div class="card"><h2>쓴 돈의 비율</h2><div class="pie" style="background:radial-gradient(circle at center, #161e33 0 42%, transparent 43%), conic-gradient(${stops})"></div>${pieLegend}</div>`;
 }
 function viewStats() {
   const t = trip();
