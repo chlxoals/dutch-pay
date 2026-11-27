@@ -66,6 +66,10 @@
   .note { font-size: 12px; color: var(--mute); margin-top: 8px; line-height: 1.5; }
   input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .tr.done { opacity: .55; }
+  .tr.done b { text-decoration: line-through; }
+  label.sentchk, label.fundchk { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; font-size: 14px; color: var(--text); }
+  label.sentchk input, label.fundchk input { width: 18px; height: 18px; padding: 0; }
   details { margin-top: 10px; }
   summary { color: var(--accent); cursor: pointer; font-size: 14px; padding: 8px 0; }
   .big-tr { font-size: 18px; padding: 14px 12px; }
@@ -84,7 +88,7 @@
   <button data-tab="home">정산</button>
   <button data-tab="rates">환율</button>
   <button data-tab="stats">통계</button>
-  <button data-tab="trips">여행</button>
+  <button data-tab="fund">공동경비</button>
 </div></nav>
 <div id="toast"></div>
 
@@ -150,9 +154,11 @@ function compute(t) {
   t.expenses.filter(e => e.amount > 0).forEach(e => {
     const krw = Math.round(e.amount * e.rate);
     e.krw = krw; total += krw;
-    if (paid[e.payer] !== undefined) paid[e.payer] += krw;
-    const ids = e.members.filter(id => owe[id] !== undefined);
-    if (ids.length) { const parts = split(krw, ids.map(id => w[id])); ids.forEach((id, k) => owe[id] += parts[k]); }
+    if (!e.fromFund) { // 공동경비로 낸 지출은 개인 간 송금 계산에서 제외
+      if (paid[e.payer] !== undefined) paid[e.payer] += krw;
+      const ids = e.members.filter(id => owe[id] !== undefined);
+      if (ids.length) { const parts = split(krw, ids.map(id => w[id])); ids.forEach((id, k) => owe[id] += parts[k]); }
+    }
     const cat = e.cat || guessCat(e.name || "") || "기타"; byCat[cat] = (byCat[cat] || 0) + krw;
     byDay[e.date] = (byDay[e.date] || 0) + krw;
     byCur[e.cur] = byCur[e.cur] || { amt: 0, krw: 0 };
@@ -200,6 +206,7 @@ function rowHtml(e, i, t) {
     <label>금액 (<span data-sym>${cs(e.cur)}</span>)</label>
     <input data-f="amount" type="number" step="any" inputmode="decimal" placeholder="예: 5800" value="${e.amount > 0 ? e.amount : ""}">
     <p class="note" data-hint>${hintText(e)}</p>
+    ${fund(t).contribs.length ? `<label class="fundchk"><input type="checkbox" data-f="fund" ${e.fromFund ? "checked" : ""}> 공동경비로 결제</label>` : ""}
     <details><summary>자세히 (항목, 날짜, 함께한 사람, 환율)</summary>
       <label>항목 이름 (선택)</label><input data-f="name" type="text" placeholder="예: 라멘, 택시" value="${esc(e.name || "")}">
       <div class="row"><div><label>카테고리</label><select data-f="cat">${catOpts}</select></div>
@@ -219,6 +226,7 @@ function rowUpdate(el) {
   if (f === "amount") e.amount = parseFloat(el.value) || 0;
   else if (f === "rate") e.rate = parseFloat(el.value) || 0;
   else if (f === "mem") e.members = [...rowEl.querySelectorAll('[data-f="mem"]:checked')].map(c => c.value);
+  else if (f === "fund") e.fromFund = el.checked;
   else if (f === "cur") {
     e.cur = el.value; e.rate = S.rates[e.cur]; form.cur = e.cur;
     rowEl.querySelector('[data-f="rate"]').value = e.rate;
@@ -258,7 +266,10 @@ function viewHome() {
   if (showResult && t.expenses.some(e => e.amount > 0)) {
     const c = compute(t);
     result = `<div class="card" id="resultCard"><h2>정산 결과</h2>
-      ${c.transfers.length ? c.transfers.map(x => `<div class="tr big-tr">${esc(nameOf(t, x.from))} → ${esc(nameOf(t, x.to))} <b>${won(x.amt)}</b></div>`).join("") : '<p class="empty">보낼 금액이 없습니다.</p>'}
+      ${c.transfers.length ? c.transfers.map(x => { const k = `${x.from}>${x.to}>${x.amt}`, d = !!(fund(t) && t.sent[k]);
+        return `<div class="tr big-tr ${d ? "done" : ""}">${esc(nameOf(t, x.from))} → ${esc(nameOf(t, x.to))} <b>${won(x.amt)}</b>
+        <label class="sentchk"><input type="checkbox" data-sent="${k}" ${d ? "checked" : ""}> 송금 완료</label></div>`; }).join("") + `<p class="note" id="sentSum">${sentText(t, c.transfers)}</p>`
+        : '<p class="empty">보낼 금액이 없습니다.</p>'}
       <details><summary>자세한 내역 보기</summary><p class="total" style="margin-top:8px">총 지출 ${won(c.total)}</p>
       ${t.members.map(m => `<div class="line"><span>${esc(m.name)}${Number(m.weight) !== 1 ? ` (${m.weight}인분)` : ""}</span><span>부담 ${won(c.owe[m.id])} · 낸 돈 ${won(c.paid[m.id])}</span></div>`).join("")}</details>
       <button class="full" data-act="copyResult">결과 문구 복사</button>
@@ -319,13 +330,58 @@ function viewStats() {
     <div class="card"><h2>통화별 합계</h2>${Object.entries(c.byCur).map(([cur, v]) => `<div class="line"><span>${CURS[cur][0]}</span><span>${cs(cur)}${num(v.amt)} ≈ ${won(v.krw)}</span></div>`).join("")}</div>`;
 }
 
-// ============ 화면: 여행 ============
-function viewTrips() {
-  return `<div class="card"><h2>새 여행(모임) 만들기</h2>
-    <div class="row"><div><input id="tName" type="text" placeholder="예: 도쿄 5박 6일" enterkeyhint="done"></div><button data-act="newTrip">만들기</button></div></div>
-    <div class="card"><h2>내 여행</h2>${S.trips.length ? S.trips.map(t => `<div class="exp"><div class="top"><b>${esc(t.name)}${t.id === S.cur ? " (선택됨)" : ""}</b>
-      <span><button class="small sub" data-act="pickTrip" data-id="${t.id}">열기</button> <button class="del" data-act="delTrip" data-id="${t.id}">삭제</button></span></div>
-      <small>${t.members.length}명 · 지출 ${t.expenses.filter(e => e.amount > 0).length}건</small></div>`).join("") : '<p class="empty">아직 여행이 없습니다.</p>'}</div>`;
+// ============ 화면: 공동경비 ============
+function fund(t) { t.fund = t.fund || { contribs: [], budget: 0, days: 0 }; t.sent = t.sent || {}; return t.fund; }
+const krwOf = e => Math.round(e.amount * e.rate);
+const sentLabel = (n, m) => `${n}/${m} 송금 완료` + (m > 0 && n === m ? " · 정산 끝!" : "");
+function sentText(t, transfers) {
+  fund(t);
+  return sentLabel(transfers.filter(x => t.sent[`${x.from}>${x.to}>${x.amt}`]).length, transfers.length);
+}
+function budgetInfo(t) {
+  const f = fund(t), used = t.expenses.filter(e => e.amount > 0);
+  if (!(f.budget > 0)) return '<p class="empty">예산을 넣으면 남은 금액을 보여 드려요.</p>';
+  const spent = used.reduce((s, e) => s + krwOf(e), 0), rest = f.budget - spent;
+  const pct = Math.round(spent / f.budget * 100);
+  let h = `<div class="bar"><span class="lb">사용 ${pct}%</span><div class="bg"><i style="width:${Math.min(pct, 100)}%;${pct >= 80 ? "background:var(--danger)" : ""}"></i></div><span class="val">${won(spent)}</span></div>
+    <div class="line"><span>남은 예산</span><b>${won(rest)}</b></div>`;
+  if (pct >= 100) h += '<p class="note" style="color:var(--danger)">예산을 넘었어요.</p>';
+  else if (pct >= 80) h += '<p class="note" style="color:var(--danger)">예산의 80%를 넘었어요.</p>';
+  if (f.days > 0) {
+    const left = f.days - new Set(used.map(e => e.date)).size;
+    h += left > 0 ? `<div class="line"><span>하루 권장 지출 (남은 ${left}일)</span><b>${won(Math.max(rest, 0) / left)}</b></div><p class="note">지출을 입력한 날짜 수를 쓴 일수로 계산해요.</p>`
+      : '<p class="note">입력한 여행 일수를 모두 썼어요.</p>';
+  }
+  return h;
+}
+function viewFund() {
+  const t = trip();
+  if (!t) return '<div class="card"><h2>공동경비</h2><p class="empty">먼저 정산 탭에서 여행을 시작해 주세요.</p></div>';
+  const f = fund(t), used = t.expenses.filter(e => e.amount > 0);
+  const total = f.contribs.reduce((s, x) => s + x.amount, 0);
+  const spent = used.filter(e => e.fromFund).reduce((s, e) => s + krwOf(e), 0);
+  const left = total - spent;
+  let status;
+  if (total > 0) {
+    status = `<div class="grid2"><div class="stat"><span class="mute">모은 돈</span><b>${won(total)}</b></div>
+      <div class="stat"><span class="mute">쓴 돈</span><b>${won(spent)}</b></div>
+      <div class="stat"><span class="mute">남은 돈</span><b>${won(left)}</b></div></div>`;
+    if (left > 0) {
+      const per = t.members.map(m => ({ m, amt: f.contribs.filter(x => x.who === m.id).reduce((s, x) => s + x.amount, 0) })).filter(p => p.amt > 0);
+      const parts = split(left, per.map(p => p.amt));
+      status += `<h2 style="margin-top:16px">여행이 끝나면 돌려줄 돈 (낸 비율대로)</h2>` + per.map((p, k) => `<div class="line"><span>${esc(p.m.name)}</span><b>${won(parts[k])}</b></div>`).join("");
+    } else if (left < 0) status += `<p class="note" style="color:var(--danger)">공동경비가 ${won(-left)} 부족해요. 부족한 지출은 정산 탭에서 "공동경비로 결제"를 풀고 개인 결제로 넣어 주세요.</p>`;
+    else status += '<p class="note">공동경비를 모두 썼어요.</p>';
+  } else status = '<p class="empty">각자 낸 돈을 넣으면 남은 돈을 보여 드려요.</p>';
+  return `<div class="card"><h2>공동경비 모으기</h2>
+    ${t.members.length ? `<div class="row"><div><label>누가 냈나요</label><select id="fWho">${t.members.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join("")}</select></div>
+      <div><label>금액 (원)</label><input id="fAmt" type="number" inputmode="numeric" placeholder="예: 100000"></div></div>
+      <button class="full" data-act="addContrib">추가</button>` : '<p class="empty">정산 탭에서 참여자를 먼저 추가해 주세요.</p>'}
+    ${f.contribs.map(x => `<div class="exp"><div class="top"><b>${esc(nameOf(t, x.who))} · ${won(x.amount)}</b><button class="del" data-act="delContrib" data-id="${x.id}">삭제</button></div></div>`).join("")}</div>
+    <div class="card"><h2>공동경비 현황</h2>${status}</div>
+    <div class="card"><h2>예산</h2><div class="row"><div><label>총 예산 (원)</label><input type="number" inputmode="numeric" data-b="budget" value="${f.budget || ""}" placeholder="예: 1000000"></div>
+      <div><label>여행 일수</label><input type="number" inputmode="numeric" data-b="days" value="${f.days || ""}" placeholder="예: 6"></div></div>
+      <div id="budgetBox" style="margin-top:10px">${budgetInfo(t)}</div></div>`;
 }
 
 // ============ 렌더 ============
@@ -333,7 +389,7 @@ function render() {
   const t = trip();
   $("tripLine").textContent = t ? "현재 여행: " + t.name : "여행을 만들어 시작하세요";
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
-  $("view").innerHTML = ({ home: viewHome, rates: viewRates, stats: viewStats, trips: viewTrips })[tab]();
+  $("view").innerHTML = ({ home: viewHome, rates: viewRates, stats: viewStats, fund: viewFund })[tab]();
   if (tab === "rates") updateCalc();
   if (tab === "home") updateHint();
 }
@@ -355,7 +411,7 @@ function updateCalc() {
 
 // ============ 동작 ============
 function newTrip(name) {
-  const t = { id: uid(), name: name || "새 여행", members: [], expenses: [], exch: [] };
+  const t = { id: uid(), name: name || "새 여행", members: [], expenses: [], exch: [], fund: { contribs: [], budget: 0, days: 0 }, sent: {} };
   S.trips.push(t); S.cur = t.id; save(); return t;
 }
 function importFromHash() {
@@ -369,7 +425,7 @@ function importFromHash() {
   } catch (e) { setTimeout(() => toast("링크를 읽을 수 없습니다"), 300); }
 }
 function makeLink(t) {
-  const json = JSON.stringify({ name: t.name, members: t.members, expenses: t.expenses.map(e => { const { krw, ...r } = e; return r; }), exch: t.exch || [] });
+  const json = JSON.stringify({ name: t.name, members: t.members, expenses: t.expenses.map(e => { const { krw, ...r } = e; return r; }), exch: t.exch || [], fund: t.fund || null });
   return location.origin + location.pathname + "#t=" + btoa(unescape(encodeURIComponent(json))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 async function fetchRates() {
@@ -384,7 +440,12 @@ async function fetchRates() {
 
 function act(a, b) {
   const t = trip();
-  if (a === "goTrips") { tab = "trips"; render(); }
+  if (a === "addContrib") {
+    const amt = parseInt($("fAmt").value, 10);
+    if (!(amt > 0)) { alert("금액을 입력해 주세요."); return; }
+    fund(t).contribs.push({ id: uid(), who: $("fWho").value, amount: amt }); save(); render();
+  }
+  if (a === "delContrib") { fund(t).contribs = fund(t).contribs.filter(x => x.id !== b.dataset.id); save(); render(); }
   if (a === "resetAll") {
     if (!t || !confirm(`"${t.name}" 여행의 참여자와 입력한 내용이 모두 지워지고 처음 화면으로 돌아갑니다. 계속할까요?`)) return;
     S.trips = S.trips.filter(x => x.id !== t.id); S.cur = null; showResult = false; form.payer = ""; save(); tab = "home"; render(); window.scrollTo(0, 0);
@@ -446,6 +507,7 @@ function act(a, b) {
 $("view").addEventListener("click", e => { const b = e.target.closest("[data-act]"); if (b) act(b.dataset.act, b); });
 $("view").addEventListener("input", e => {
   const el = e.target, t = trip();
+  if (el.dataset.b && t) { fund(t)[el.dataset.b] = parseFloat(el.value) || 0; save(); $("budgetBox").innerHTML = budgetInfo(t); return; }
   if (el.dataset.f && rowUpdate(el)) return;
   if (el.id === "eAmt" || el.id === "eRate") updateHint();
   if (el.id === "eName" && form.catAuto) { const g = guessCat(el.value); form.cat = g; document.querySelectorAll("#catChips .chip").forEach(x => x.classList.toggle("on", x.dataset.v === g)); }
@@ -461,6 +523,15 @@ $("view").addEventListener("keydown", e => {
   if (e.target.id === "mName") act("addMember"); if (e.target.id === "tName") act("newTrip");
 });
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => { tab = b.dataset.tab; render(); window.scrollTo(0, 0); });
+
+$("view").addEventListener("change", e => {
+  const k = e.target.dataset.sent; if (k === undefined) return;
+  const t = trip(); if (!t) return; fund(t);
+  t.sent[k] = e.target.checked; save();
+  e.target.closest(".tr").classList.toggle("done", e.target.checked);
+  const all = [...document.querySelectorAll("[data-sent]")];
+  $("sentSum").textContent = sentLabel(all.filter(c => c.checked).length, all.length);
+});
 
 importFromHash();
 render();
