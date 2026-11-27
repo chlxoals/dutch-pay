@@ -98,6 +98,37 @@
   .erow { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #131820; }
   .erow-head { display: flex; justify-content: space-between; align-items: center; }
   .erow-head b { color: var(--accent); font-size: 13px; }
+
+  /* ===== 디자인 정리: 결과는 영수증처럼, 나머지는 조용하게 ===== */
+  :root { --paper: #ece6d6; --ink: #1c1f26; --card: #141a24; --line: #232b38; }
+  body { font-variant-numeric: tabular-nums; background: radial-gradient(900px 360px at 50% -120px, #1b2740 0%, transparent 70%), var(--bg); background-attachment: fixed; }
+  .wrap { padding-top: 28px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; }
+  .logo { width: 32px; height: 32px; vertical-align: -9px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 16px; box-shadow: 0 12px 30px -20px rgba(0,0,0,.9); }
+  h2 { font-size: 14px; margin-bottom: 14px; letter-spacing: 0; }
+  input, select { background: #0d1219; border: 1px solid #2a3342; border-radius: 10px; padding: 13px 14px; }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(201,164,92,.18); }
+  button { border-radius: 10px; background: linear-gradient(180deg, #d8b46c, #c09a52); }
+  button.sub { background: transparent; }
+  .erow { background: #101620; border-radius: 12px; border-color: #202938; }
+  .bar .bg { height: 16px; border-radius: 4px; }
+  nav { background: rgba(11,14,19,.92); backdrop-filter: blur(8px); }
+  .hero { padding: 32px 20px 24px; background: linear-gradient(160deg, #1b2740 0%, #141a24 65%); }
+  .hero-t { font-size: 28px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.2; margin-bottom: 6px; }
+  .hero-s { color: var(--mute); font-size: 14px; margin: 0 0 18px; }
+  #resultCard { position: relative; background: var(--paper); color: var(--ink); border: 0; border-radius: 6px 6px 0 0; padding: 22px 20px 26px; margin-bottom: 30px; box-shadow: 0 20px 40px -22px rgba(0,0,0,.95); }
+  #resultCard::after { content: ""; position: absolute; left: 0; right: 0; bottom: -10px; height: 10px; background: linear-gradient(135deg, var(--paper) 5px, transparent 0) 0 0 / 10px 10px, linear-gradient(225deg, var(--paper) 5px, transparent 0) 0 0 / 10px 10px; }
+  #resultCard h2 { color: #7a5c1e; border-bottom: 1px dashed #b9ae94; padding-bottom: 12px; }
+  #resultCard .tr { background: transparent; border: 0; border-bottom: 1px dashed #c4b99f; border-radius: 0; margin: 0; padding: 14px 0; font-size: 16px; }
+  #resultCard .tr b { display: block; font-size: 30px; font-weight: 800; letter-spacing: -0.03em; margin-top: 2px; color: var(--ink); }
+  #resultCard label.sentchk { color: #5a5f6b; }
+  #resultCard .note, #resultCard .empty { color: #6b6f7a; }
+  #resultCard .line { border-bottom-color: #c4b99f; color: var(--ink); }
+  #resultCard summary { color: #7a5c1e; }
+  #resultCard .total { color: var(--ink); }
+  #resultCard button { background: var(--ink); color: #f1ead8; }
+  #resultCard button.sub { background: transparent; color: var(--ink); border: 1px solid var(--ink); }
 </style>
 </head>
 <body>
@@ -262,9 +293,9 @@ function rowUpdate(el) {
 
 // ============ 여행 시작 카드 (어느 탭에서든 사용) ============
 function startCard() {
-  return `<div class="card"><h2>새 여행 시작</h2>
-    <div class="row"><div><input id="tName" type="text" placeholder="여행 이름 (예: 도쿄 5박 6일)" enterkeyhint="done"></div><button data-act="newTrip">시작</button></div>
-    <p class="note">이름만 정하면 시작할 수 있어요. 출발 전에는 예산 탭, 여행 후에는 정산 탭을 쓰세요.</p></div>`;
+  return `<div class="card hero"><div class="hero-t">어디로<br>떠나세요?</div><p class="hero-s">여행 이름만 정하면 바로 시작해요.</p>
+    <div class="row"><div><input id="tName" type="text" placeholder="예: 도쿄 3박 4일" enterkeyhint="done"></div><button data-act="newTrip">시작</button></div>
+    <p class="note">출발 전에는 예산 탭, 여행 후에는 정산 탭을 쓰세요.</p></div>`;
 }
 
 // ============ 화면: 정산 ============
