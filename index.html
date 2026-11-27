@@ -75,7 +75,7 @@
   .plan-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
   .plan-row:last-of-type { border-bottom: 0; }
   .plan-row .pn { width: 40px; flex: none; font-size: 14px; }
-  .plan-row input { width: 62px; flex: none; padding: 8px; font-size: 15px; text-align: right; }
+  .plan-row input { width: 100px; flex: none; padding: 8px; font-size: 15px; text-align: right; }
   .pv { flex: 1; text-align: right; font-size: 14px; min-width: 0; }
   .pv small { display: block; color: var(--mute); font-size: 12px; margin-top: 2px; }
   .bar .bg.stack { display: flex; position: relative; }
@@ -356,7 +356,7 @@ function daySumText(t, d) {
   return loc > 0 ? `${cs(cur)}${num(loc, r >= 100 ? 2 : 0)} · ${won(loc * r)}` : "미입력";
 }
 function statsOut(t) {
-  const f = fund(t), D = dayData(t), plan = planOf(f);
+  const f = fund(t), D = dayData(t), plan = allocOf(f);
   if (D.total === 0) return '<div class="card"><p class="empty">금액을 적으면 예산과 비교한 그래프가 나와요.</p></div>';
   const fx = v => cs(D.cur) + num(v / D.r, D.r >= 100 ? 2 : 0);
   const hasBudget = f.budget > 0, done = D.filled >= D.n;
@@ -381,13 +381,13 @@ function statsOut(t) {
   const maxDay = Math.max(...D.byDay.map(x => x.sum), dayBudget, 1);
   const legend = CATS.map(c => `<span class="lg"><i class="dot" style="background:${COLORS[c]}"></i>${c}</span>`).join("");
   const dayRows = D.byDay.map(x => `<div class="bar"><span class="lb">${x.d}일차</span><div class="bg stack">${CATS.map(c => x.cats[c] ? `<i style="width:${x.cats[c] / maxDay * 100}%;background:${COLORS[c]}"></i>` : "").join("")}${dayBudget ? `<u style="left:${dayBudget / maxDay * 100}%"></u>` : ""}</div><span class="val">${x.sum ? won(x.sum) : "-"}</span></div>`).join("");
-  const planAmt = c => hasBudget ? f.budget * (plan[c] || 0) / 100 : 0;
+  const hasPlan = CATS.some(c => plan[c] > 0), planAmt = c => parseFloat(plan[c]) || 0;
   const maxC = Math.max(...CATS.map(c => Math.max(planAmt(c), D.byCat[c])), 1);
   const cmp = CATS.map(c => {
-    const p = planAmt(c), a = D.byCat[c], over = hasBudget && a > p;
-    const note = hasBudget ? (a === 0 && p === 0 ? "" : over ? `${won(a - p)} 초과` : `${won(p - a)} 아낌`) : "";
+    const p = planAmt(c), a = D.byCat[c], over = hasPlan && a > p;
+    const note = hasPlan ? (a === 0 && p === 0 ? "" : over ? `${won(a - p)} 초과` : `${won(p - a)} 아낌`) : "";
     return `<div class="cmp"><div class="cmp-h"><b>${c}</b><span style="color:${over ? "var(--danger)" : "var(--accent)"}">${note}</span></div>
-      ${hasBudget ? `<div class="bar"><span class="lb">계획</span><div class="bg"><i style="width:${p / maxC * 100}%;background:#4a5568"></i></div><span class="val">${won(p)}</span></div>` : ""}
+      ${hasPlan ? `<div class="bar"><span class="lb">계획</span><div class="bg"><i style="width:${p / maxC * 100}%;background:#4a5568"></i></div><span class="val">${won(p)}</span></div>` : ""}
       <div class="bar"><span class="lb">실제</span><div class="bg"><i style="width:${a / maxC * 100}%;background:${over ? "var(--danger)" : COLORS[c]}"></i></div><span class="val">${won(a)}</span></div></div>`;
   }).join("");
   let acc = 0;
@@ -432,45 +432,41 @@ function budgetInfo(t) {
   if (f.days > 0) h += `<div class="line"><span>하루 한도 (${f.days}일)</span><b>${won(f.budget / f.days)} · ${fx(f.budget / f.days)}</b></div>`;
   return h;
 }
-// ---- 예산 나누기 (규칙 기반 추천 비율, 직접 수정 가능) ----
-const STYLES = {
-  "균형": { 식비: 45, 교통: 20, 쇼핑: 25, 기타: 10 },
-  "먹방": { 식비: 55, 교통: 15, 쇼핑: 20, 기타: 10 },
-  "쇼핑": { 식비: 35, 교통: 15, 쇼핑: 40, 기타: 10 },
-  "알뜰": { 식비: 45, 교통: 25, 쇼핑: 15, 기타: 15 }
-};
-function planOf(f) {
-  if (!f.plan || "숙박" in f.plan) { f.style = STYLES[f.style] ? f.style : "균형"; f.plan = { ...STYLES[f.style] }; } // 예전(숙박 포함) 계획은 새 비율로 교체
-  return f.plan;
+// ---- 예산 나누기 (카테고리별 금액을 직접 적는 계획, 원 단위) ----
+function allocOf(f) { f.alloc = f.alloc || {}; return f.alloc; }
+function planSummary(t) {
+  const f = fund(t), al = allocOf(f), used = CATS.reduce((a, c) => a + (parseFloat(al[c]) || 0), 0);
+  if (!(f.budget > 0)) return { used, label: "남은 금액", value: "총 예산을 먼저 넣어 주세요", over: false };
+  const rest = f.budget - used;
+  return rest >= 0 ? { used, label: "남은 금액", value: won(rest), over: false } : { used, label: "초과", value: `${won(-rest)} 초과됐어요`, over: true };
 }
 function spentByCat(t) { return dayData(t).byCat; }
 function planVals(t, c) {
-  const f = fund(t), pct = planOf(f)[c] || 0, cur = f.cur || "JPY", r = S.rates[cur] || 1, fd = r >= 100 ? 2 : 0;
-  const amt = f.budget > 0 ? f.budget * pct / 100 : 0, spent = spentByCat(t)[c] || 0;
+  const f = fund(t), amt = parseFloat(allocOf(f)[c]) || 0, cur = f.cur || "JPY", r = S.rates[cur] || 1, fd = r >= 100 ? 2 : 0;
   return {
-    main: f.budget > 0 ? `${won(amt)} · ${cs(cur)}${num(amt / r, fd)}` : "예산을 먼저 넣어 주세요",
-    sub: f.budget > 0 && f.days > 0 ? "하루 " + won(amt / f.days) : "",
-    over: false
+    main: amt > 0 ? `${cs(cur)}${num(amt / r, fd)}` : "",
+    sub: amt > 0 && f.days > 0 ? "하루 " + won(amt / f.days) : ""
   };
 }
-const planSumText = plan => { const s = CATS.reduce((a, c) => a + (plan[c] || 0), 0); return s === 100 ? "합계 100%" : `합계 ${s}% (100%가 되도록 맞춰 주세요)`; };
 function planHtml(t) {
-  const f = fund(t), plan = planOf(f);
-  return `<div class="chips">${Object.keys(STYLES).map(s => `<button class="chip stylechip ${f.style === s ? "on" : ""}" data-act="planStyle" data-v="${s}">${s}</button>`).join("")}</div>
+  const f = fund(t), al = allocOf(f), s = planSummary(t);
+  return `<p class="note" style="margin-top:0">카테고리마다 쓸 금액을 원 단위로 적어요. 숙박과 항공권은 미리 예약하는 비용이라 포함하지 않아요.</p>
     ${CATS.map(c => { const v = planVals(t, c); return `<div class="plan-row" data-cat="${c}"><span class="pn">${c}</span>
-      <input type="number" inputmode="numeric" data-p="${c}" value="${plan[c] || 0}"><span class="mute" style="margin:0">%</span>
-      <div class="pv"><b data-pv>${v.main}</b><small data-ps style="${v.over ? "color:var(--danger)" : ""}">${v.sub}</small></div></div>`; }).join("")}
-    <p class="note" id="planSum">${planSumText(plan)}</p>
-    <p class="note">비율은 일반적인 예시예요. 실제 물가와 다를 수 있으니 직접 고쳐서 쓰세요. 숙박과 항공권은 미리 예약하는 비용이라 포함하지 않아요.</p>`;
+      <input type="number" inputmode="numeric" data-p="${c}" value="${al[c] > 0 ? al[c] : ""}" placeholder="0"><span class="mute" style="margin:0">원</span>
+      <div class="pv"><b data-pv>${v.main}</b><small data-ps>${v.sub}</small></div></div>`; }).join("")}
+    <div class="line" style="margin-top:6px"><span>나눈 금액</span><b id="planUsed">${won(s.used)}</b></div>
+    <div class="line"><span id="planLabel">${s.label}</span><b id="planRest" style="color:${s.over ? "var(--danger)" : "var(--accent)"}">${s.value}</b></div>`;
 }
 function updatePlan(t) {
-  const plan = planOf(fund(t));
   document.querySelectorAll(".plan-row").forEach(row => {
     const v = planVals(t, row.dataset.cat);
     row.querySelector("[data-pv]").textContent = v.main;
-    const s = row.querySelector("[data-ps]"); s.textContent = v.sub; s.style.color = v.over ? "var(--danger)" : "";
+    row.querySelector("[data-ps]").textContent = v.sub;
   });
-  const ps = $("planSum"); if (ps) ps.textContent = planSumText(plan);
+  const s = planSummary(t);
+  if ($("planUsed")) $("planUsed").textContent = won(s.used);
+  if ($("planLabel")) $("planLabel").textContent = s.label;
+  if ($("planRest")) { $("planRest").textContent = s.value; $("planRest").style.color = s.over ? "var(--danger)" : "var(--accent)"; }
 }
 function viewBudget() {
   const t = trip();
@@ -481,7 +477,7 @@ function viewBudget() {
     <div class="row"><div><label>여행 일수 (3박 4일은 4)</label><input type="number" inputmode="numeric" data-b="days" value="${f.days || ""}" placeholder="예: 6"></div>
     <div><label>현지 통화</label><select data-b="cur">${Object.keys(CURS).filter(c => c !== "KRW").map(c => `<option value="${c}" ${c === cur ? "selected" : ""}>${cs(c)} ${CURS[c][0]}</option>`).join("")}</select></div></div></div>
     <div class="card"><h2>환전과 한도</h2><div id="budgetBox">${budgetInfo(t)}</div></div>
-    <div class="card"><h2>예산 나누기 (카테고리별 계획)</h2>${planHtml(t)}</div>`;
+    <div class="card"><h2>예산 나누기 (직접 적기)</h2>${planHtml(t)}</div>`;
 }
 
 // ============ 렌더 ============
@@ -540,7 +536,6 @@ async function fetchRates() {
 
 function act(a, b) {
   const t = trip();
-  if (a === "planStyle") { const f = fund(t); f.plan = { ...STYLES[b.dataset.v] }; f.style = b.dataset.v; save(); render(); }
   if (a === "resetAll") {
     if (!t || !confirm(`"${t.name}" 여행의 참여자와 입력한 내용이 모두 지워지고 처음 화면으로 돌아갑니다. 계속할까요?`)) return;
     S.trips = S.trips.filter(x => x.id !== t.id); S.cur = null; showResult = false; form.payer = ""; save(); tab = "home"; render(); window.scrollTo(0, 0);
@@ -610,8 +605,7 @@ $("view").addEventListener("input", e => {
     return;
   }
   if (el.dataset.p && t) {
-    const f = fund(t); planOf(f)[el.dataset.p] = parseFloat(el.value) || 0; f.style = "";
-    document.querySelectorAll(".stylechip").forEach(x => x.classList.remove("on")); save(); updatePlan(t); return;
+    allocOf(fund(t))[el.dataset.p] = parseFloat(el.value) || 0; save(); updatePlan(t); return;
   }
   if (el.dataset.f && rowUpdate(el)) return;
   if (el.id === "eAmt" || el.id === "eRate") updateHint();
