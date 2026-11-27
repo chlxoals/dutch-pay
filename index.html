@@ -82,11 +82,13 @@
 
 <script>
 // ============ 기본 데이터 ============
-const CURS = { // [이름, 참고용 기본 환율(1단위 = 원)]
-  KRW: ["대한민국 원", 1], JPY: ["일본 엔", 9.2], USD: ["미국 달러", 1400], EUR: ["유로", 1500],
-  GBP: ["영국 파운드", 1750], CNY: ["중국 위안", 195], THB: ["태국 바트", 42],
-  VND: ["베트남 동", 0.055], TWD: ["대만 달러", 44], AUD: ["호주 달러", 920]
+const CURS = { // [이름, 참고용 기본 환율(1단위 = 원), 기호, 짧은 이름]
+  KRW: ["대한민국 원", 1, "₩", "원"], JPY: ["일본 엔", 9.2, "¥", "엔"], USD: ["미국 달러", 1400, "$", "달러"], EUR: ["유로", 1500, "€", "유로"],
+  GBP: ["영국 파운드", 1750, "£", "파운드"], CNY: ["중국 위안", 195, "元", "위안"], THB: ["태국 바트", 42, "฿", "바트"],
+  VND: ["베트남 동", 0.055, "₫", "동"], TWD: ["대만 달러", 44, "NT$", "대만달러"], AUD: ["호주 달러", 920, "A$", "호주달러"]
 };
+const cs = c => CURS[c][2];   // 기호 ($)
+const ck = c => CURS[c][3];   // 짧은 한글 이름 (달러)
 const CATS = ["식비", "교통", "숙박", "쇼핑", "기타"];
 const KEYWORDS = {
   교통: ["택시", "버스", "지하철", "전철", "기차", "공항", "렌트", "주유", "교통", "열차", "신칸센"],
@@ -182,15 +184,15 @@ function viewHome() {
 
   let formCard = "";
   if (t.members.length >= 2) {
-    const curOpts = Object.keys(CURS).map(c => `<option value="${c}" ${form.cur === c ? "selected" : ""}>${c} · ${CURS[c][0]}</option>`).join("");
+    const curOpts = Object.keys(CURS).map(c => `<option value="${c}" ${form.cur === c ? "selected" : ""}>${cs(c)} ${CURS[c][0]}</option>`).join("");
     formCard = `<div class="card"><h2>2. 지출 입력</h2>
       <div class="row"><div><label>날짜</label><input id="eDate" type="date" value="${form.date}"></div>
       <div><label>결제한 사람</label><select id="ePayer">${t.members.map(m => `<option value="${m.id}" ${form.payer === m.id ? "selected" : ""}>${esc(m.name)}</option>`).join("")}</select></div></div>
       <label>항목 이름 (선택)</label><input id="eName" type="text" placeholder="예: 라멘, 택시">
       <label>카테고리</label><div class="chips" id="catChips">${CATS.map(c => `<button class="chip ${form.cat === c ? "on" : ""}" data-act="cat" data-v="${c}">${c}</button>`).join("")}</div>
-      <div class="row"><div><label>금액</label><input id="eAmt" type="number" step="any" inputmode="decimal" placeholder="예: 5800"></div>
+      <div class="row"><div><label>금액 (<span id="eSym">${cs(form.cur)}</span>)</label><input id="eAmt" type="number" step="any" inputmode="decimal" placeholder="예: 5800"></div>
       <div><label>통화</label><select id="eCur">${curOpts}</select></div></div>
-      <label>환율 (1<span id="eUnit">${form.cur}</span> = 몇 원)</label>
+      <label>환율 (1<span id="eUnit">${ck(form.cur)}</span> = 몇 원)</label>
       <div class="row"><div><input id="eRate" type="number" step="any" inputmode="decimal" value="${S.rates[form.cur]}"></div>
       <button class="sub small" data-act="rateBase">기준환율</button><button class="sub small" data-act="rateAvg">환전평균</button></div>
       <p class="note" id="eHint">금액을 입력하면 원화 환산액이 보입니다.</p>
@@ -200,7 +202,7 @@ function viewHome() {
   }
 
   const list = `<div class="card"><h2>지출 내역 (${t.expenses.length})</h2>${t.expenses.length ?
-    [...t.expenses].reverse().map(e => `<div class="exp"><div class="top"><b>${esc(e.name || e.cat || "지출")} · ${num(e.amount)} ${e.cur}</b>
+    [...t.expenses].reverse().map(e => `<div class="exp"><div class="top"><b>${esc(e.name || e.cat || "지출")} · ${cs(e.cur)}${num(e.amount)}</b>
       <button class="del" data-act="delExp" data-id="${e.id}">삭제</button></div>
       <small>${e.date} · ${esc(e.cat || "기타")} · ≈ ${won(Math.round(e.amount * e.rate))} (환율 ${num(e.rate, 4)}) · 결제 ${esc(nameOf(t, e.payer))} · 함께 ${e.members.map(id => esc(nameOf(t, id))).join(", ")}</small></div>`).join("")
     : '<p class="empty">아직 지출이 없습니다.</p>'}</div>`;
@@ -222,22 +224,22 @@ function viewHome() {
 function viewRates() {
   const t = trip();
   const rateRows = Object.keys(CURS).filter(c => c !== "KRW").map(c =>
-    `<div class="rate-row"><span>${CURS[c][0]} (${c})</span><input type="number" step="any" inputmode="decimal" value="${S.rates[c]}" data-rate="${c}"><span class="mute" style="flex:none;margin:0">원</span></div>`).join("");
-  const calcChips = Object.keys(CURS).filter(c => c !== "KRW").map(c => `<button class="chip ${calcCur === c ? "on" : ""}" data-act="calcCur" data-v="${c}">${c}</button>`).join("");
+    `<div class="rate-row"><span>${cs(c)} ${CURS[c][0]}</span><input type="number" step="any" inputmode="decimal" value="${S.rates[c]}" data-rate="${c}"><span class="mute" style="flex:none;margin:0">원</span></div>`).join("");
+  const calcChips = Object.keys(CURS).filter(c => c !== "KRW").map(c => `<button class="chip ${calcCur === c ? "on" : ""}" data-act="calcCur" data-v="${c}">${cs(c)} ${ck(c)}</button>`).join("");
   const exchCard = t ? `<div class="card"><h2>환전 기록 · 실제 적용 환율</h2>
       <div class="row"><div><label>환전한 사람</label><select id="xWho">${t.members.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join("")}</select></div>
-      <div><label>통화</label><select id="xCur">${Object.keys(CURS).filter(c => c !== "KRW").map(c => `<option>${c}</option>`).join("")}</select></div></div>
+      <div><label>통화</label><select id="xCur">${Object.keys(CURS).filter(c => c !== "KRW").map(c => `<option value="${c}">${cs(c)} ${CURS[c][0]}</option>`).join("")}</select></div></div>
       <div class="row"><div><label>낸 원화</label><input id="xKrw" type="number" inputmode="numeric" placeholder="예: 150000"></div>
       <div><label>받은 외화</label><input id="xFor" type="number" step="any" inputmode="decimal" placeholder="예: 16000"></div></div>
       <button class="full" data-act="addExch">환전 기록 추가</button>
-      ${(t.exch || []).length ? (t.exch).map(x => `<div class="exp"><div class="top"><b>${esc(nameOf(t, x.who))} · ${won(x.krw)} → ${num(x.foreign)} ${x.cur}</b><button class="del" data-act="delExch" data-id="${x.id}">삭제</button></div>
-        <small>적용 환율 1${x.cur} = ${num(x.krw / x.foreign, 4)}원</small></div>`).join("") : '<p class="empty">환전 내역을 넣으면 실제 적용 환율을 계산합니다.</p>'}
-      ${Object.keys(CURS).filter(c => avgRate(t, c)).map(c => `<div class="line"><span>${c} 평균 환율</span><b>${num(avgRate(t, c), 4)}원</b></div>`).join("")}</div>` : "";
+      ${(t.exch || []).length ? (t.exch).map(x => `<div class="exp"><div class="top"><b>${esc(nameOf(t, x.who))} · ${won(x.krw)} → ${cs(x.cur)}${num(x.foreign)}</b><button class="del" data-act="delExch" data-id="${x.id}">삭제</button></div>
+        <small>적용 환율 1${ck(x.cur)} =${num(x.krw / x.foreign, 4)}원</small></div>`).join("") : '<p class="empty">환전 내역을 넣으면 실제 적용 환율을 계산합니다.</p>'}
+      ${Object.keys(CURS).filter(c => avgRate(t, c)).map(c => `<div class="line"><span>${ck(c)} 평균 환율</span><b>${num(avgRate(t, c), 4)}원</b></div>`).join("")}</div>` : "";
   return `<div class="card"><h2>환율 계산기</h2><div class="chips">${calcChips}</div>
-      <label id="cLabel">${calcCur} 금액</label><input id="cAmt" type="number" step="any" inputmode="decimal" placeholder="예: 5">
-      <div class="big" id="cRes">0원</div><p class="note" id="cNote">1${calcCur} = ${num(S.rates[calcCur], 4)}원 (기준환율)</p>
+      <label id="cLabel">${ck(calcCur)} 금액 (${cs(calcCur)})</label><input id="cAmt" type="number" step="any" inputmode="decimal" placeholder="예: 5">
+      <div class="big" id="cRes">0원</div><p class="note" id="cNote">1${ck(calcCur)} =${num(S.rates[calcCur], 4)}원 (기준환율)</p>
       <label>원화로 입력 → 외화</label><input id="cKrw" type="number" inputmode="numeric" placeholder="예: 10000">
-      <div class="big" id="cRes2" style="font-size:20px">0 ${calcCur}</div></div>
+      <div class="big" id="cRes2" style="font-size:20px">${cs(calcCur)}0</div></div>
     <div class="card"><h2>기준환율 (1단위 = 몇 원)</h2>${rateRows}
       <button class="full sub" data-act="fetchRates">최신 환율 불러오기 (인터넷 필요)</button>
       <p class="note">${S.rateTime ? "마지막 갱신: " + esc(S.rateTime) : "아직 불러오지 않음. 현재 값은 참고용 기본값이니 실제 환율에 맞게 고쳐 주세요."}<br>화면의 환율은 기준 환율이며 실제 환전·카드 환율과 다를 수 있습니다.</p></div>${exchCard}`;
@@ -267,7 +269,7 @@ function viewStats() {
     <div class="card"><h2>날짜별 지출</h2>${bars(dayEntries, won)}</div>
     <div class="card"><h2>카테고리별 지출</h2>${bars(catEntries, won, c.total)}</div>
     <div class="card"><h2>사람별 부담 금액</h2>${bars(personEntries, won)}<h2 style="margin-top:16px">사람별 결제 금액</h2>${bars(paidEntries, won)}</div>
-    <div class="card"><h2>통화별 합계</h2>${Object.entries(c.byCur).map(([cur, v]) => `<div class="line"><span>${cur}</span><span>${num(v.amt)} ${cur} ≈ ${won(v.krw)}</span></div>`).join("")}</div>`;
+    <div class="card"><h2>통화별 합계</h2>${Object.entries(c.byCur).map(([cur, v]) => `<div class="line"><span>${CURS[cur][0]}</span><span>${cs(cur)}${num(v.amt)} ≈ ${won(v.krw)}</span></div>`).join("")}</div>`;
 }
 
 // ============ 화면: 여행 ============
@@ -300,9 +302,9 @@ function updateCalc() {
   const a = parseFloat($("cAmt").value);
   $("cRes").textContent = a > 0 ? won(a * r) : "0원";
   const k = parseFloat($("cKrw").value);
-  $("cRes2").textContent = (k > 0 ? num(k / r) : "0") + " " + calcCur;
-  $("cNote").textContent = `1${calcCur} = ${num(r, 4)}원 (기준환율)`;
-  $("cLabel").textContent = calcCur + " 금액";
+  $("cRes2").textContent = cs(calcCur) + (k > 0 ? num(k / r) : "0");
+  $("cNote").textContent = `1${ck(calcCur)} = ${num(r, 4)}원 (기준환율)`;
+  $("cLabel").textContent = ck(calcCur) + " 금액 (" + cs(calcCur) + ")";
 }
 
 // ============ 동작 ============
@@ -408,7 +410,7 @@ $("view").addEventListener("input", e => {
   if (el.id === "cAmt" || el.id === "cKrw") updateCalc();
 });
 $("view").addEventListener("change", e => {
-  if (e.target.id === "eCur") { form.cur = e.target.value; $("eRate").value = S.rates[form.cur]; $("eUnit").textContent = form.cur; updateHint(); }
+  if (e.target.id === "eCur") { form.cur = e.target.value; $("eRate").value = S.rates[form.cur]; $("eUnit").textContent = ck(form.cur); $("eSym").textContent = cs(form.cur); updateHint(); }
 });
 $("view").addEventListener("keydown", e => {
   if (e.key !== "Enter") return;
